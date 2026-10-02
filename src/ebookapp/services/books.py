@@ -87,6 +87,7 @@ def book_out(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
         "title": row["title"],
         "description": row["description"],
         "whop_product_id": row["whop_product_id"],
+        "language": row["language"],
         "status": row["status"],
         "has_cover": bool(row["cover_key"]),
         "current_edition": current,
@@ -124,9 +125,10 @@ def create_book(conn: sqlite3.Connection, data: BookCreate) -> dict[str, Any]:
     now = now_iso()
     with transaction(conn):
         conn.execute(
-            "INSERT INTO books (id, title, description, whop_product_id, created_at, updated_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (book_id, data.title, data.description, data.whop_product_id, now, now),
+            "INSERT INTO books"
+            " (id, title, description, whop_product_id, language, created_at, updated_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (book_id, data.title, data.description, data.whop_product_id, data.language, now, now),
         )
         conn.execute(
             "INSERT INTO editions (id, book_id, number, status, created_at)"
@@ -181,6 +183,8 @@ def update_book(conn: sqlite3.Connection, book_id: str, data: BookUpdate) -> dic
         raise field_error("title", "Der Titel darf nicht leer sein.")
     if "description" in changes and changes["description"] is None:
         changes["description"] = ""
+    if "language" in changes and changes["language"] is None:
+        del changes["language"]
     with transaction(conn):
         get_book_row(conn, book_id)
         if changes:

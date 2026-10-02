@@ -23,7 +23,7 @@ from ..logging_setup import configure_logging
 from ..ratelimit import RateLimiter
 from ..services import auth, misc
 from ..storage import Storage
-from . import admin, buyer
+from . import admin, buyer, buyer_texts
 from .api import build_api
 from .common import AppContext, ErrorInfo
 from .middleware import CoreMiddleware
@@ -145,6 +145,8 @@ def _error_page(request: Request, info: ErrorInfo, headers: dict[str, str] | Non
         "title": f"Fehler {info.status_code}",
         "message": info.message,
         "state": "error",
+        "lang": buyer_texts.DEFAULT_LANGUAGE,
+        "t": buyer_texts.TEXTS[buyer_texts.DEFAULT_LANGUAGE],
     }
     response = admin.render(
         request,

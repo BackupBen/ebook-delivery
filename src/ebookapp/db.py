@@ -150,6 +150,11 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX backup_runs_started ON backup_runs(started_at);
     """,
+    # Version 2: Sprache der Käuferseite und der Versandnachricht je Buch
+    """
+    ALTER TABLE books ADD COLUMN language TEXT NOT NULL DEFAULT 'de'
+        CHECK (language IN ('de', 'en'));
+    """,
 ]
 
 

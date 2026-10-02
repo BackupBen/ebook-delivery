@@ -24,7 +24,9 @@ Zahlungsabwicklung.
 
 ## Wie es funktioniert
 
-1. **Buch anlegen** und PDF und/oder EPUB in den Entwurf der ersten Ausgabe hochladen.
+1. **Buch anlegen** und PDF und/oder EPUB in den Entwurf der ersten Ausgabe hochladen. Die
+   Sprache des Buchs (Deutsch oder Englisch) bestimmt die Sprache der Downloadseite und der
+   Versandnachricht.
 2. **Ausgabe veröffentlichen.** Veröffentlichte Ausgaben sind unveränderlich.
 3. **Downloadlink erstellen.** Der Link gilt für genau ein Buch. Ohne weitere Angaben ist
    er dauerhaft gültig und unbegrenzt nutzbar; Ablaufdatum und Downloadlimit sind optional.

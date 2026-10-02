@@ -48,9 +48,14 @@ curl -sS -X POST "$BASE/books" \
   -d '{
         "title": "Mein E-Book",
         "description": "Kurze Beschreibung für die Downloadseite.",
-        "whop_product_id": "prod_AbC123xyz"
+        "whop_product_id": "prod_AbC123xyz",
+        "language": "de"
       }'
 ```
+
+`language` ist `de` (Standard) oder `en` und bestimmt die Sprache der Downloadseite und der
+Versandnachricht. Sie lässt sich später mit `PATCH /books/{id}` ändern und gilt dann auch
+für bestehende Links.
 
 Die Antwort enthält `id` (z. B. `bk_…`) und unter `draft_edition.id` den Entwurf der
 ersten Ausgabe (z. B. `ed_…`).

@@ -58,6 +58,16 @@
             "title": "Description",
             "type": "string"
           },
+          "language": {
+            "default": "de",
+            "description": "Sprache der Käuferseite und der Versandnachricht (de oder en)",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
           "title": {
             "description": "Titel des Buchs",
             "maxLength": 200,
@@ -165,6 +175,14 @@
             "title": "Id",
             "type": "string"
           },
+          "language": {
+            "enum": [
+              "de",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
           "links": {
             "$ref": "#/components/schemas/LinkCounts"
           },
@@ -201,6 +219,7 @@
           "title",
           "description",
           "whop_product_id",
+          "language",
           "status",
           "has_cover",
           "current_edition",
@@ -251,6 +270,21 @@
               }
             ],
             "title": "Description"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "de",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
           },
           "title": {
             "anyOf": [

@@ -34,6 +34,17 @@
         {{ field_error(error, "description") }}
       </div>
       <div class="field">
+        <label for="language">Sprache</label>
+        {% set current_language = values.language if values.language is defined and values.language else book.language %}
+        <select id="language" name="language" {{ invalid(error, "language") }}>
+          {% for code, label in LANGUAGE_LABELS.items() %}
+          <option value="{{ code }}"{% if current_language == code %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <p class="hint">Bestimmt die Sprache der Downloadseite und der Versandnachricht, auch für bestehende Links.</p>
+        {{ field_error(error, "language") }}
+      </div>
+      <div class="field">
         <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
         <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ (values.whop_product_id if values.whop_product_id is defined else book.whop_product_id) or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
         {{ field_error(error, "whop_product_id") }}
@@ -42,6 +53,7 @@
     </form>
     <dl class="facts small mt">
       <dt>Buch-ID</dt><dd class="mono">{{ book.id }}</dd>
+      <dt>Sprache</dt><dd>{{ LANGUAGE_LABELS[book.language] }}</dd>
       <dt>Angelegt</dt><dd>{{ book.created_at | dt }}</dd>
       <dt>Downloads gesamt</dt><dd>{{ book.downloads_total }}</dd>
     </dl>

@@ -21,6 +21,7 @@ from .. import __version__
 from ..db import open_db, parse_iso
 from ..errors import AppError, Forbidden, NotFound, field_error
 from ..schemas import (
+    LANGUAGE_LABELS,
     SCOPE_LABELS,
     SCOPES,
     ApiKeyCreate,
@@ -36,6 +37,7 @@ from ..schemas import (
 from ..security import constant_time_equal, new_token, rate_key, unwrap_code, wrap_code
 from ..services import auth, books, links, misc
 from ..validation import MEDIA_TYPES, EpubLimits, download_filename
+from . import buyer_texts
 from .common import (
     AppContext,
     ErrorInfo,
@@ -77,15 +79,16 @@ class LoginRequired(Exception):
 # ---------------------------------------------------------------------------
 
 
-def _filesize(value: int | None) -> str:
+def _filesize(value: int | None, language: str = "de") -> str:
     if value is None:
         return "–"
     size = float(value)
     for unit in ("Bytes", "KB", "MB", "GB"):
         if size < 1024 or unit == "GB":
             if unit == "Bytes":
-                return f"{int(size)} Bytes"
-            return f"{size:.1f} {unit}".replace(".", ",")
+                return f"{int(size)} Bytes" if language == "de" else f"{int(size)} bytes"
+            text = f"{size:.1f} {unit}"
+            return text if language == "en" else text.replace(".", ",")
         size /= 1024
     return f"{value} Bytes"
 
@@ -108,6 +111,7 @@ def install_filters(settings_timezone: Any) -> None:
     templates.env.filters["filesize"] = _filesize
     templates.env.globals["STATE_LABELS"] = STATE_LABELS
     templates.env.globals["SCOPE_LABELS"] = SCOPE_LABELS
+    templates.env.globals["LANGUAGE_LABELS"] = LANGUAGE_LABELS
     templates.env.globals["app_version"] = __version__
 
 
@@ -422,6 +426,7 @@ def book_create(
         "title": form_text(post.form, "title"),
         "description": form_text(post.form, "description"),
         "whop_product_id": form_text(post.form, "whop_product_id"),
+        "language": form_text(post.form, "language") or "de",
     }
     try:
         book = books.create_book(conn, BookCreate.model_validate(values))
@@ -503,6 +508,7 @@ def book_edit(
         "title": form_text(post.form, "title"),
         "description": form_text(post.form, "description"),
         "whop_product_id": form_text(post.form, "whop_product_id") or None,
+        "language": form_text(post.form, "language") or None,
     }
     try:
         books.update_book(conn, book_id, BookUpdate.model_validate(values))
@@ -832,15 +838,26 @@ def _local_datetime(c: AppContext, value: str) -> datetime | None:
         raise field_error("expires_at", "Ungültiges Ablaufdatum.") from exc
 
 
-def _validity_text(c: AppContext, link: dict[str, Any]) -> str:
+def _validity_text(c: AppContext, link: dict[str, Any], language: str = "de") -> str:
     parts = []
+    english = language == "en"
     if link["expires_at"]:
         local = parse_iso(link["expires_at"]).astimezone(c.settings.timezone)
-        parts.append(f"Der Link ist bis zum {local.strftime('%d.%m.%Y, %H:%M Uhr')} gültig.")
+        date_text = buyer_texts.format_datetime(local, language)
+        parts.append(
+            f"The link is valid until {date_text}."
+            if english
+            else f"Der Link ist bis zum {date_text} gültig."
+        )
     else:
-        parts.append("Der Link ist dauerhaft gültig.")
+        parts.append("The link does not expire." if english else "Der Link ist dauerhaft gültig.")
     if link["max_downloads"]:
-        parts.append(f"Er kann für höchstens {link['max_downloads']} Downloads verwendet werden.")
+        count = link["max_downloads"]
+        parts.append(
+            f"It can be used for up to {count} download{'s' if count != 1 else ''}."
+            if english
+            else f"Er kann für höchstens {count} Downloads verwendet werden."
+        )
     return " ".join(parts)
 
 
@@ -961,16 +978,23 @@ def link_create(
         return _link_form(request, conn, values, error=error_info(exc))
 
     url = links.build_url(base_url(request, c.settings), code)
+    language = books.get_book_row(conn, link["book_id"])["language"]
     message = misc.render_message(
-        misc.get_message_template(conn),
+        misc.get_message_template(conn, language),
         title=link["book_title"],
         url=url,
-        validity=_validity_text(c, link),
+        validity=_validity_text(c, link, language),
     )
     return render(
         request,
         "admin/link_created.html",
-        {"nav": "links", "link": link, "url": url, "message": message},
+        {
+            "nav": "links",
+            "link": link,
+            "url": url,
+            "message": message,
+            "language_label": LANGUAGE_LABELS[language],
+        },
         status_code=201,
     )
 
@@ -1149,6 +1173,7 @@ def _settings_page(
             "nav": "settings",
             "limits": limits,
             "message_template": misc.get_message_template(conn),
+            "message_template_en": misc.get_message_template(conn, "en"),
             "api_keys": auth.list_api_keys(conn),
             "scopes": SCOPES,
             "backup": c.backups.status(conn),
@@ -1180,7 +1205,13 @@ def settings_save(
     c = ctx(request)
     values = {
         name: form_text(post.form, name)
-        for name in ("max_pdf_mb", "max_epub_mb", "max_cover_mb", "message_template")
+        for name in (
+            "max_pdf_mb",
+            "max_epub_mb",
+            "max_cover_mb",
+            "message_template",
+            "message_template_en",
+        )
     }
     try:
         misc.update_settings(conn, c.settings, SettingsUpdate.model_validate(values))

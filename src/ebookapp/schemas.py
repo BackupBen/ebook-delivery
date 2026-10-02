@@ -25,6 +25,10 @@ SCOPE_LABELS = {
 
 WHOP_PATTERN = r"^prod_[A-Za-z0-9_-]{3,64}$"
 
+Language = Literal["de", "en"]
+LANGUAGES: tuple[str, ...] = ("de", "en")
+LANGUAGE_LABELS = {"de": "Deutsch", "en": "Englisch"}
+
 
 class _Input(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -51,6 +55,10 @@ class BookCreate(_Input):
         description="Optionale Whop-Produkt-ID (prod_…). Wird nur gespeichert.",
         examples=["prod_AbC123xyz"],
     )
+    language: Language = Field(
+        default="de",
+        description="Sprache der Käuferseite und der Versandnachricht (de oder en)",
+    )
 
     _blank = field_validator("whop_product_id", mode="before")(_blank_to_none)
 
@@ -59,6 +67,7 @@ class BookUpdate(_Input):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
     whop_product_id: str | None = Field(default=None, pattern=WHOP_PATTERN)
+    language: Language | None = Field(default=None)
 
     _blank = field_validator("whop_product_id", mode="before")(_blank_to_none)
 
@@ -167,6 +176,9 @@ class SettingsUpdate(_Input):
     max_epub_mb: int = Field(ge=1)
     max_cover_mb: int = Field(ge=1)
     message_template: str = Field(min_length=1, max_length=5000)
+    message_template_en: str | None = Field(default=None, max_length=5000)
+
+    _blank_en = field_validator("message_template_en", mode="before")(_blank_to_none)
 
 
 class PasswordChange(_Input):
@@ -216,6 +228,7 @@ class BookOut(BaseModel):
     title: str
     description: str
     whop_product_id: str | None
+    language: Language
     status: Literal["active", "archived"]
     has_cover: bool
     current_edition: EditionOut | None

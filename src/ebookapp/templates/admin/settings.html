@@ -31,8 +31,14 @@
       <div class="field">
         <label for="message_template">Vorlage der Versandnachricht</label>
         <textarea id="message_template" name="message_template" rows="11" maxlength="5000" required {{ invalid(error, "message_template") }}>{{ values.message_template or message_template }}</textarea>
-        <p class="hint">Platzhalter: <code>{titel}</code>, <code>{link}</code>, <code>{gueltigkeit}</code>.</p>
+        <p class="hint">Für Bücher auf Deutsch. Platzhalter: <code>{titel}</code>, <code>{link}</code>, <code>{gueltigkeit}</code>.</p>
         {{ field_error(error, "message_template") }}
+      </div>
+      <div class="field">
+        <label for="message_template_en">Vorlage der Versandnachricht (Englisch)</label>
+        <textarea id="message_template_en" name="message_template_en" rows="11" maxlength="5000" required {{ invalid(error, "message_template_en") }}>{{ values.message_template_en or message_template_en }}</textarea>
+        <p class="hint">Für Bücher auf Englisch. Gleiche Platzhalter; <code>{gueltigkeit}</code> wird auf Englisch eingesetzt.</p>
+        {{ field_error(error, "message_template_en") }}
       </div>
       <button class="btn" type="submit">Einstellungen speichern</button>
     </form>

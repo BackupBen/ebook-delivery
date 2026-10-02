@@ -301,6 +301,7 @@ class BuyerView:
     state: str
     title: str
     description: str
+    language: str
     book_id: str
     edition_id: str
     cover_key: str | None
@@ -323,7 +324,8 @@ def resolve(conn: sqlite3.Connection, code: str) -> BuyerView | None:
         return None
     row = conn.execute(
         f"""
-        SELECT l.*, {STATE_SQL} AS state, b.title, b.description, b.cover_key, b.cover_mime
+        SELECT l.*, {STATE_SQL} AS state, b.title, b.description, b.language,
+               b.cover_key, b.cover_mime
         FROM links l JOIN books b ON b.id = l.book_id
         WHERE l.code_hash = :hash
         """,  # noqa: S608 - STATE_SQL ist eine feste Konstante
@@ -344,6 +346,7 @@ def resolve(conn: sqlite3.Connection, code: str) -> BuyerView | None:
         state=row["state"],
         title=row["title"],
         description=row["description"],
+        language=row["language"],
         book_id=row["book_id"],
         edition_id=row["edition_id"],
         cover_key=row["cover_key"],

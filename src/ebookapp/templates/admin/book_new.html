@@ -19,6 +19,16 @@
     {{ field_error(error, "description") }}
   </div>
   <div class="field">
+    <label for="language">Sprache</label>
+    <select id="language" name="language" {{ invalid(error, "language") }}>
+      {% for code, label in LANGUAGE_LABELS.items() %}
+      <option value="{{ code }}"{% if (values.language or "de") == code %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <p class="hint">Bestimmt die Sprache der Downloadseite und der Versandnachricht.</p>
+    {{ field_error(error, "language") }}
+  </div>
+  <div class="field">
     <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
     <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ values.whop_product_id or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
     <p class="hint">Wird nur zur Zuordnung gespeichert. Es gibt noch keine Verbindung zu Whop.</p>

@@ -26,6 +26,17 @@ Bitte bewahre den Link gut auf und gib ihn nicht weiter.
 
 Viele Grüße"""
 
+DEFAULT_MESSAGE_TEMPLATE_EN = """Hi,
+
+thank you for your purchase! Here is your personal download link for "{titel}":
+
+{link}
+
+{gueltigkeit}
+Please keep the link safe and do not share it.
+
+Best regards"""
+
 # ---------------------------------------------------------------------------
 # Einstellungen
 # ---------------------------------------------------------------------------
@@ -74,7 +85,9 @@ def get_limits(conn: sqlite3.Connection, settings: Settings) -> Limits:
     )
 
 
-def get_message_template(conn: sqlite3.Connection) -> str:
+def get_message_template(conn: sqlite3.Connection, language: str = "de") -> str:
+    if language == "en":
+        return _get(conn, "message_template_en") or DEFAULT_MESSAGE_TEMPLATE_EN
     return _get(conn, "message_template") or DEFAULT_MESSAGE_TEMPLATE
 
 
@@ -88,11 +101,17 @@ def update_settings(conn: sqlite3.Connection, settings: Settings, data: Settings
             )
     if "{link}" not in data.message_template:
         raise field_error("message_template", "Die Vorlage muss den Platzhalter {link} enthalten.")
+    if data.message_template_en is not None and "{link}" not in data.message_template_en:
+        raise field_error(
+            "message_template_en", "Die Vorlage muss den Platzhalter {link} enthalten."
+        )
     with transaction(conn):
         _set(conn, "max_pdf_mb", str(data.max_pdf_mb))
         _set(conn, "max_epub_mb", str(data.max_epub_mb))
         _set(conn, "max_cover_mb", str(data.max_cover_mb))
         _set(conn, "message_template", data.message_template)
+        # Leer bedeutet: die mitgelieferte englische Vorlage verwenden.
+        _set(conn, "message_template_en", data.message_template_en or "")
 
 
 def render_message(template: str, *, title: str, url: str, validity: str) -> str:

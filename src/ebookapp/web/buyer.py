@@ -17,67 +17,43 @@ from ..db import open_db, parse_iso
 from ..security import client_fingerprint, rate_key
 from ..services import links
 from ..validation import MEDIA_TYPES, download_filename
+from . import buyer_texts
 from .admin import render
 from .common import client_ip, ctx
 from .middleware import CSP_FILE
 
 router = APIRouter(include_in_schema=False)
 
-STATE_PAGES: dict[str, tuple[int, str, str]] = {
-    "not_found": (
-        404,
-        "Link nicht gefunden",
-        "Diesen Downloadlink gibt es nicht. Bitte prüfe, ob der Link vollständig kopiert wurde.",
-    ),
-    "disabled": (
-        403,
-        "Link derzeit deaktiviert",
-        "Dieser Downloadlink ist im Moment deaktiviert. Bitte wende dich an den Verkäufer.",
-    ),
-    "revoked": (
-        410,
-        "Link widerrufen",
-        "Dieser Downloadlink wurde widerrufen und kann nicht mehr verwendet werden. Bitte "
-        "wende dich an den Verkäufer.",
-    ),
-    "expired": (
-        410,
-        "Link abgelaufen",
-        "Die Gültigkeit dieses Downloadlinks ist abgelaufen. Bitte wende dich an den "
-        "Verkäufer, wenn du einen neuen Link benötigst.",
-    ),
-    "exhausted": (
-        410,
-        "Downloadlimit erreicht",
-        "Für diesen Link wurde die maximale Anzahl an Downloads erreicht. Ein bereits "
-        "begonnener Download kann noch kurze Zeit fortgesetzt werden. Bitte wende dich an "
-        "den Verkäufer, wenn du einen neuen Link benötigst.",
-    ),
-    "format_unavailable": (
-        404,
-        "Format nicht verfügbar",
-        "Dieses Format ist über diesen Link nicht verfügbar.",
-    ),
-    "rate_limited": (
-        429,
-        "Zu viele Anfragen",
-        "Von deinem Anschluss kamen zu viele Anfragen. Bitte warte einige Minuten und "
-        "versuche es dann erneut.",
-    ),
-    "file_missing": (
-        503,
-        "Datei vorübergehend nicht verfügbar",
-        "Die Datei kann gerade nicht bereitgestellt werden. Bitte versuche es später "
-        "erneut oder wende dich an den Verkäufer.",
-    ),
-}
+
+def page_language(request: Request) -> str:
+    """Sprache für Seiten ohne Buchbezug: nach den Browser-Einstellungen."""
+    return buyer_texts.from_accept_language(request.headers.get("accept-language"))
 
 
-def state_page(request: Request, state: str, retry_after: int | None = None) -> Response:
-    status, title, message = STATE_PAGES[state]
-    response = render(
+def render_buyer(
+    request: Request,
+    name: str,
+    language: str,
+    context: dict[str, Any],
+    *,
+    status_code: int = 200,
+) -> Response:
+    language = buyer_texts.normalize(language)
+    data = {"lang": language, "t": buyer_texts.TEXTS[language], **context}
+    response = render(request, name, data, status_code=status_code)
+    response.headers["Content-Language"] = language
+    return response
+
+
+def state_page(
+    request: Request, state: str, retry_after: int | None = None, language: str | None = None
+) -> Response:
+    language = buyer_texts.normalize(language or page_language(request))
+    status, title, message = buyer_texts.STATE_PAGES[language][state]
+    response = render_buyer(
         request,
         "buyer/state.html",
+        language,
         {"title": title, "message": message, "state": state},
         status_code=status,
     )
@@ -117,7 +93,7 @@ def _range_unsatisfiable(header: str | None, size: int) -> bool:
 
 @router.get("/")
 def home(request: Request) -> Response:
-    return render(request, "buyer/home.html", {})
+    return render_buyer(request, "buyer/home.html", page_language(request), {})
 
 
 @router.get("/robots.txt")
@@ -152,19 +128,17 @@ def buyer_page(request: Request, code: str) -> Response:
         view = links.resolve(conn, code)
     if view is None:
         return _unknown(request)
+    language = buyer_texts.normalize(view.language)
     if view.state != "active":
-        return state_page(request, view.state)
+        return state_page(request, view.state, language=language)
+    texts = buyer_texts.TEXTS[language]
     files = [
         {
             "format": fmt,
-            "label": fmt.upper(),
+            "label": texts["download_button"].replace("{format}", fmt.upper()),
             "size_bytes": view.files[fmt]["size_bytes"],
             "url": f"/d/{code}/{fmt}",
-            "hint": (
-                "für Computer, Tablets und zum Drucken"
-                if fmt == "pdf"
-                else "für E-Book-Reader und Lese-Apps"
-            ),
+            "hint": texts[f"hint_{fmt}"],
         }
         for fmt in ("pdf", "epub")
         if fmt in view.files
@@ -175,8 +149,12 @@ def buyer_page(request: Request, code: str) -> Response:
         "files": files,
         "cover_url": f"/d/{code}/cover" if view.cover_key else None,
         "expires_at": view.expires_at,
-        "expires_local": (
-            parse_iso(view.expires_at).astimezone(c.settings.timezone) if view.expires_at else None
+        "expires_text": (
+            buyer_texts.format_datetime(
+                parse_iso(view.expires_at).astimezone(c.settings.timezone), language
+            )
+            if view.expires_at
+            else None
         ),
         "remaining": (
             max(0, view.max_downloads - view.download_count)
@@ -184,7 +162,7 @@ def buyer_page(request: Request, code: str) -> Response:
             else None
         ),
     }
-    return render(request, "buyer/download.html", context)
+    return render_buyer(request, "buyer/download.html", language, context)
 
 
 @router.get("/d/{code}/cover")
@@ -223,7 +201,7 @@ def buyer_file(request: Request, code: str, fmt: str) -> Response:
             # Erst prüfen, ob überhaupt geliefert werden kann. Sonst würde ein Download
             # gezählt, den der Käufer nie erhält.
             if not c.storage.exists(candidate["storage_key"]):
-                return state_page(request, "file_missing")
+                return state_page(request, "file_missing", language=view.language)
             if _range_unsatisfiable(request.headers.get("range"), candidate["size_bytes"]):
                 return Response(
                     status_code=416,
@@ -240,7 +218,7 @@ def buyer_file(request: Request, code: str, fmt: str) -> Response:
                 window_max_hours=settings.download_window_max_hours,
             )
         except links.DownloadDenied as denied:
-            return state_page(request, denied.state)
+            return state_page(request, denied.state, language=view.language)
     return FileResponse(
         c.storage.path(file_row["storage_key"]),
         media_type=MEDIA_TYPES[fmt],
