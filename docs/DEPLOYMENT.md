@@ -42,7 +42,11 @@ Image enthält keine Secrets und keine Buchdateien.
    - Domains: `https://ebooks.example.com`
    - Ports Exposes: `8000`
    - Ports Mappings: **leer lassen**. Die App darf nur über den Proxy erreichbar sein.
-   - Custom Docker Options: `--cap-drop=ALL --security-opt=no-new-privileges:true --init`
+   - Custom Docker Options: `--cap-drop=ALL --init`
+
+     `--security-opt=no-new-privileges:true` ist sinnvoll, lässt sich hier aber nicht
+     eintragen: Coolify (getestet mit 4.1.2) kürzt den Wert am ersten Bindestrich, und der
+     Container startet nicht. Variante B setzt die Option über `docker-compose.yaml`.
 3. **Persistent Storage**, zwei Einträge vom Typ *Volume Mount*:
 
    | Name | Destination Path |
@@ -62,7 +66,9 @@ Image enthält keine Secrets und keine Buchdateien.
    | `ADMIN_PASSWORD` | Startpasswort |
    | `BACKUP_PASSWORD` | Backup-Passwort |
 
-   Weitere Variablen nach Bedarf, siehe `.env.example`.
+   Weitere Variablen nach Bedarf, siehe `.env.example`. Für die automatische Auslieferung
+   nach Whop-Zahlungen zusätzlich `WHOP_WEBHOOK_SECRET`, `BREVO_API_KEY` und
+   `MAIL_FROM_EMAIL`, siehe [WHOP.md](WHOP.md).
 5. **Healthcheck**: nichts einstellen. Das Image bringt einen eigenen Health-Check mit
    (`ebookctl healthcheck`), der Vorrang hat. Coolify leitet erst dann Verkehr auf den
    Container, wenn er „healthy“ meldet.

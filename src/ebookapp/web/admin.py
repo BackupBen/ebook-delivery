@@ -31,13 +31,13 @@ from ..schemas import (
     EditionPublish,
     LinkCreate,
     LinkUpdate,
+    OrderEmail,
     PasswordChange,
     SettingsUpdate,
 )
 from ..security import constant_time_equal, new_token, rate_key, unwrap_code, wrap_code
-from ..services import auth, books, links, misc
+from ..services import auth, books, links, mail, misc, orders
 from ..validation import MEDIA_TYPES, EpubLimits, download_filename
-from . import buyer_texts
 from .common import (
     AppContext,
     ErrorInfo,
@@ -839,26 +839,7 @@ def _local_datetime(c: AppContext, value: str) -> datetime | None:
 
 
 def _validity_text(c: AppContext, link: dict[str, Any], language: str = "de") -> str:
-    parts = []
-    english = language == "en"
-    if link["expires_at"]:
-        local = parse_iso(link["expires_at"]).astimezone(c.settings.timezone)
-        date_text = buyer_texts.format_datetime(local, language)
-        parts.append(
-            f"The link is valid until {date_text}."
-            if english
-            else f"Der Link ist bis zum {date_text} gültig."
-        )
-    else:
-        parts.append("The link does not expire." if english else "Der Link ist dauerhaft gültig.")
-    if link["max_downloads"]:
-        count = link["max_downloads"]
-        parts.append(
-            f"It can be used for up to {count} download{'s' if count != 1 else ''}."
-            if english
-            else f"Er kann für höchstens {count} Downloads verwendet werden."
-        )
-    return " ".join(parts)
+    return misc.validity_text(link, language, c.settings.timezone)
 
 
 def _links_page(
@@ -1174,6 +1155,12 @@ def _settings_page(
             "limits": limits,
             "message_template": misc.get_message_template(conn),
             "message_template_en": misc.get_message_template(conn, "en"),
+            "mail_subject": misc.get_mail_subject(conn, "de"),
+            "mail_subject_en": misc.get_mail_subject(conn, "en"),
+            "mail_configured": c.settings.mail_configured,
+            "mail_from": c.settings.mail_from_email,
+            "mail_from_name": c.settings.mail_from_name,
+            "whop_configured": bool(c.settings.whop_webhook_secret),
             "api_keys": auth.list_api_keys(conn),
             "scopes": SCOPES,
             "backup": c.backups.status(conn),
@@ -1211,6 +1198,8 @@ def settings_save(
             "max_cover_mb",
             "message_template",
             "message_template_en",
+            "mail_subject",
+            "mail_subject_en",
         )
     }
     try:
@@ -1321,3 +1310,196 @@ def backup_verify(
     except AppError as exc:
         return _settings_page(request, conn, error=error_info(exc))
     return _settings_page(request, conn, backup_report=report)
+
+
+# ---------------------------------------------------------------------------
+# Bestellungen (Whop)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/admin/orders")
+def orders_list(
+    request: Request,
+    session: dict = Depends(require_admin),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    q = request.query_params.get("q", "").strip()[:254]
+    status = request.query_params.get("status", "")
+    page, offset = _page(request)
+    return render(
+        request,
+        "admin/orders_list.html",
+        {
+            "nav": "orders",
+            "result": orders.list_orders(
+                conn, q=q, status=status or None, limit=PAGE_SIZE, offset=offset
+            ),
+            "counts": orders.counts(conn),
+            "q": q,
+            "status": status,
+            "page": page,
+            "page_size": PAGE_SIZE,
+            "ORDER_STATUS_LABELS": orders.STATUS_LABELS,
+            "webhook_url": f"{base_url(request, c.settings)}/webhooks/whop",
+            "whop_configured": bool(c.settings.whop_webhook_secret),
+            "mail_configured": c.settings.mail_configured,
+        },
+    )
+
+
+def _order_page(
+    request: Request, conn: sqlite3.Connection, order_id: str, *, error: ErrorInfo | None = None
+) -> Response:
+    c = ctx(request)
+    return render(
+        request,
+        "admin/order_detail.html",
+        {
+            "nav": "orders",
+            "order": orders.get_order(conn, order_id),
+            "mail_configured": c.settings.mail_configured,
+        },
+        error=error,
+    )
+
+
+@router.get("/admin/orders/{order_id}")
+def order_detail(
+    request: Request,
+    order_id: str,
+    session: dict = Depends(require_admin),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    return _order_page(request, conn, order_id)
+
+
+def _order_action(
+    request: Request,
+    conn: sqlite3.Connection,
+    post: AdminPost,
+    order_id: str,
+    action: Any,
+) -> Response:
+    c = ctx(request)
+    try:
+        result = action()
+    except (AppError, ValidationError) as exc:
+        if isinstance(exc, NotFound):
+            raise
+        return _order_page(request, conn, order_id, error=error_info(exc))
+    if result == "pending":
+        c.mailer.wake()
+        message = (
+            "Die E-Mail wird versendet."
+            if c.settings.mail_configured
+            else "Der Link ist bereit. Die E-Mail wird versendet, sobald der Versand "
+            "eingerichtet ist."
+        )
+    else:
+        message = f"Status: {orders.STATUS_LABELS.get(result, result)}."
+    flash(conn, post.session, "success", message)
+    return redirect(f"/admin/orders/{order_id}")
+
+
+@router.post("/admin/orders/{order_id}/retry")
+def order_retry(
+    request: Request,
+    order_id: str,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    return _order_action(
+        request, conn, post, order_id, lambda: orders.retry(conn, c.settings, order_id)
+    )
+
+
+@router.post("/admin/orders/{order_id}/resend")
+def order_resend(
+    request: Request,
+    order_id: str,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    return _order_action(
+        request,
+        conn,
+        post,
+        order_id,
+        lambda: orders.resend_new_link(conn, c.settings, order_id),
+    )
+
+
+@router.post("/admin/orders/{order_id}/email")
+def order_email(
+    request: Request,
+    order_id: str,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+
+    def action() -> str:
+        address = OrderEmail.model_validate({"email": form_text(post.form, "email")}).email
+        orders.update_email(conn, order_id, address)
+        order = orders.get_order(conn, order_id)
+        if order["status"] == "sent":
+            return "sent"
+        return orders.retry(conn, c.settings, order_id)
+
+    return _order_action(request, conn, post, order_id, action)
+
+
+@router.post("/admin/settings/mail-test")
+def settings_mail_test(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    language = "en" if form_text(post.form, "language") == "en" else "de"
+    try:
+        address = OrderEmail.model_validate({"email": form_text(post.form, "email")}).email
+        url = f"{base_url(request, c.settings)}/d/BEISPIEL"
+        text = mail.fill(
+            misc.get_message_template(conn, language),
+            title="Beispielbuch" if language == "de" else "Sample Book",
+            url=url,
+            validity=misc.validity_text(
+                {"expires_at": None, "max_downloads": None}, language, c.settings.timezone
+            ),
+            name="",
+        )
+        subject = mail.subject_line(
+            misc.get_mail_subject(conn, language),
+            title="Beispielbuch" if language == "de" else "Sample Book",
+            name="",
+        )
+        mail.send(
+            c.settings,
+            mail.Email(
+                to_email=address,
+                to_name="",
+                subject=f"[Test] {subject}",
+                text=text,
+                html=mail.to_html(text, url, language),
+            ),
+            tags=["test"],
+        )
+    except mail.MailError as exc:
+        return _settings_page(
+            request,
+            conn,
+            error=ErrorInfo(
+                message=f"Test-E-Mail nicht versendet. {exc}",
+                code="mail_failed",
+                fields=[],
+                status_code=502,
+            ),
+        )
+    except (AppError, ValidationError) as exc:
+        return _settings_page(request, conn, error=error_info(exc))
+    flash(conn, post.session, "success", f"Test-E-Mail an {address} versendet.")
+    return redirect("/admin/settings#versand")

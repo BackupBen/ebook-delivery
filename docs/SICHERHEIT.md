@@ -59,6 +59,7 @@ ohne gültigen Schlüssel werden abgewiesen, bevor ihr Inhalt gelesen wird.
 | API-Schlüssel | SHA-256 | einmal, beim Erstellen |
 | Administrator-Passwort | scrypt (N=2^16, r=8, p=2) mit Salt | nie |
 | Sitzungs-Token | SHA-256 | nur im Cookie |
+| Whop-Webhook-Geheimnis, Brevo-API-Schlüssel | nur in der Umgebung | nie |
 
 **Protokolle.** Die App schreibt ihr Zugriffsprotokoll selbst: Methode, bereinigter Pfad,
 Status, Dauer, Fehler-ID. Unterhalb von `/d/` wird aus der Anfrage nur das Format
@@ -154,6 +155,26 @@ muss ausdrücklich gewählt werden, ob bestehende Links umgestellt werden; es gi
 Standardwert. Ein Link wird nie auf eine Ausgabe umgestellt, die keines seiner freigegebenen
 Formate enthält. Veröffentlichte Ausgaben und ihre Dateien sind unveränderlich.
 
+**Bestellungen aus Whop.** Für den E-Mail-Versand muss die App den Code eines Links noch
+kennen, nachdem er erzeugt wurde. Er wird deshalb mit dem `SECRET_KEY` verschlüsselt bei der
+Bestellung abgelegt und **nach dem erfolgreichen Versand gelöscht**. Nur bei Bestellungen,
+deren E-Mail noch aussteht oder fehlgeschlagen ist, liegt er verschlüsselt in der Datenbank
+(und damit im Backup). E-Mail-Adresse und Name des Käufers werden zur Bestellung
+gespeichert; sie erscheinen nicht im Log und nicht in der Bezeichnung des Links.
+
+## Whop-Webhook
+
+- Jede Meldung muss nach „Standard Webhooks“ mit HMAC-SHA256 signiert sein
+  (`webhook-id`, `webhook-timestamp`, `webhook-signature`). Geprüft wird über die
+  unveränderten Rohdaten mit konstantem Zeitvergleich.
+- Meldungen, die älter oder neuer als fünf Minuten sind, werden abgelehnt (Schutz vor
+  Wiedereinspielen).
+- Bereits verarbeitete `webhook-id`s und Zahlungs-IDs werden erkannt: Jede Zahlung erzeugt
+  höchstens einen Link und eine E-Mail.
+- Ohne `WHOP_WEBHOOK_SECRET` nimmt der Endpunkt nichts an.
+- E-Mails gehen nur an die Adresse aus der signierten Zahlung; Betreff und Text stammen aus
+  den Vorlagen der Verwaltung. Inhalte werden für die HTML-Fassung maskiert.
+
 ## API
 
 - Anmeldung ausschließlich über `Authorization: Bearer`. Schlüssel in der URL werden
@@ -185,6 +206,7 @@ Formate enthält. Veröffentlichte Ausgaben und ihre Dateien sind unveränderlic
   danach widerrufene Links und API-Schlüssel wieder aktiv.
 - **Kein zweiter Faktor.** Die Verwaltung ist durch ein Passwort geschützt. Ein langes,
   nur hier verwendetes Passwort ist Voraussetzung.
+- **Rückerstattungen.** Eine Erstattung in Whop widerruft den Link nicht automatisch.
 - **PDF-Prüfung.** Geprüft werden Kennung und Endmarke, nicht der innere Aufbau. Die App
   wertet PDFs nicht aus und liefert sie nur als Download.
 

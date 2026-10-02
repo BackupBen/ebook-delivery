@@ -47,6 +47,12 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      # --- Whop und E-Mail-Versand (docs/WHOP.md) -------------------------------------
+      WHOP_WEBHOOK_SECRET: ${WHOP_WEBHOOK_SECRET:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
       # --- optional -------------------------------------------------------------------
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Berlin}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-512}

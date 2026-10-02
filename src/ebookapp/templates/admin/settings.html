@@ -31,7 +31,7 @@
       <div class="field">
         <label for="message_template">Vorlage der Versandnachricht</label>
         <textarea id="message_template" name="message_template" rows="11" maxlength="5000" required {{ invalid(error, "message_template") }}>{{ values.message_template or message_template }}</textarea>
-        <p class="hint">Für Bücher auf Deutsch. Platzhalter: <code>{titel}</code>, <code>{link}</code>, <code>{gueltigkeit}</code>.</p>
+        <p class="hint">Für Bücher auf Deutsch. Platzhalter: <code>{titel}</code>, <code>{link}</code>, <code>{gueltigkeit}</code>, <code>{name}</code> (nur bei E-Mails aus Whop gefüllt, sonst entfernt).</p>
         {{ field_error(error, "message_template") }}
       </div>
       <div class="field">
@@ -40,8 +40,51 @@
         <p class="hint">Für Bücher auf Englisch. Gleiche Platzhalter; <code>{gueltigkeit}</code> wird auf Englisch eingesetzt.</p>
         {{ field_error(error, "message_template_en") }}
       </div>
+      <fieldset>
+        <legend>Betreff der E-Mail an Whop-Käufer</legend>
+        <div class="field">
+          <label for="mail_subject">Deutsch</label>
+          <input id="mail_subject" name="mail_subject" type="text" maxlength="200" value="{{ values.mail_subject or mail_subject }}" {{ invalid(error, "mail_subject") }}>
+          {{ field_error(error, "mail_subject") }}
+        </div>
+        <div class="field">
+          <label for="mail_subject_en">Englisch</label>
+          <input id="mail_subject_en" name="mail_subject_en" type="text" maxlength="200" value="{{ values.mail_subject_en or mail_subject_en }}" {{ invalid(error, "mail_subject_en") }}>
+          {{ field_error(error, "mail_subject_en") }}
+        </div>
+        <p class="hint">Die E-Mail an Käufer aus Whop verwendet die Versandnachricht oben als Text. Zusätzlicher Platzhalter: <code>{name}</code> (Name des Käufers; ohne Namen entfällt er samt Leerzeichen, z. B. „Hallo {name},“ → „Hallo,“).</p>
+      </fieldset>
       <button class="btn" type="submit">Einstellungen speichern</button>
     </form>
+  </section>
+
+  <section class="card" aria-labelledby="h-mail">
+    <h2 id="h-mail">E-Mail-Versand (Brevo)</h2>
+    <dl class="facts small">
+      <dt>Versand</dt><dd>{% if mail_configured %}<span class="badge badge-active">eingerichtet</span>{% else %}<span class="badge badge-disabled">nicht eingerichtet</span>{% endif %}</dd>
+      <dt>Absender</dt><dd>{% if mail_from %}{{ mail_from_name ~ " " if mail_from_name }}&lt;{{ mail_from }}&gt;{% else %}–{% endif %}</dd>
+      <dt>Whop-Webhook</dt><dd>{% if whop_configured %}<span class="badge badge-active">Geheimnis gesetzt</span>{% else %}<span class="badge badge-disabled">nicht eingerichtet</span>{% endif %} <a href="/admin/orders">Bestellungen</a></dd>
+    </dl>
+    {% if not mail_configured %}
+    <p class="hint">Für den Versand die Umgebungsvariablen <code>BREVO_API_KEY</code> und <code>MAIL_FROM_EMAIL</code> setzen (optional <code>MAIL_FROM_NAME</code>, <code>MAIL_REPLY_TO</code>). Die Absender-Domain muss in Brevo bestätigt sein.</p>
+    {% else %}
+    <form method="post" action="/admin/settings/mail-test">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="test_email">Test-E-Mail an</label>
+        <input id="test_email" name="email" type="email" required maxlength="254" autocomplete="email" {{ invalid(error, "email") }}>
+        {{ field_error(error, "email") }}
+      </div>
+      <div class="field">
+        <label for="test_language">Sprache</label>
+        <select id="test_language" name="language">
+          {% for code, label in LANGUAGE_LABELS.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-secondary" type="submit">Test-E-Mail senden</button>
+      <p class="hint">Enthält einen Beispiel-Link, der nicht funktioniert.</p>
+    </form>
+    {% endif %}
   </section>
 
   <section class="card" aria-labelledby="h-password">

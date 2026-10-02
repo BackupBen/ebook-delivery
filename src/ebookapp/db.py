@@ -155,6 +155,44 @@ MIGRATIONS: list[str] = [
     ALTER TABLE books ADD COLUMN language TEXT NOT NULL DEFAULT 'de'
         CHECK (language IN ('de', 'en'));
     """,
+    # Version 3: Bestellungen aus Whop und E-Mail-Versand
+    """
+    -- Bereits verarbeitete Webhook-Zustellungen (webhook-id). Whop stellt mindestens
+    -- einmal zu; Wiederholungen werden hieran erkannt.
+    CREATE TABLE webhook_events (
+        id TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        type TEXT NOT NULL,
+        received_at TEXT NOT NULL
+    );
+    CREATE INDEX webhook_events_received ON webhook_events(received_at);
+
+    CREATE TABLE orders (
+        id TEXT PRIMARY KEY,
+        source TEXT NOT NULL DEFAULT 'whop',
+        payment_id TEXT NOT NULL,
+        product_id TEXT NOT NULL DEFAULT '',
+        product_title TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        name TEXT NOT NULL DEFAULT '',
+        book_id TEXT REFERENCES books(id) ON DELETE SET NULL,
+        link_id TEXT REFERENCES links(id) ON DELETE SET NULL,
+        status TEXT NOT NULL
+            CHECK (status IN ('pending', 'sent', 'failed', 'unmatched', 'no_email')),
+        detail TEXT NOT NULL DEFAULT '',
+        -- Verschlüsselter Link-Code, nur bis die E-Mail versendet ist.
+        wrapped_code TEXT,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at TEXT,
+        sent_at TEXT,
+        message_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (source, payment_id)
+    );
+    CREATE INDEX orders_created ON orders(created_at);
+    CREATE INDEX orders_due ON orders(status, next_attempt_at);
+    """,
 ]
 
 

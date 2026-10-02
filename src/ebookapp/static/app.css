@@ -481,7 +481,8 @@ select[aria-invalid="true"] {
 }
 
 .badge-active,
-.badge-published {
+.badge-published,
+.badge-sent {
   background: var(--ok-soft);
   border-color: var(--ok);
   color: var(--ok);
@@ -489,7 +490,10 @@ select[aria-invalid="true"] {
 
 .badge-revoked,
 .badge-expired,
-.badge-exhausted {
+.badge-exhausted,
+.badge-failed,
+.badge-unmatched,
+.badge-no_email {
   background: var(--danger-soft);
   border-color: var(--danger);
   color: var(--danger);
@@ -497,7 +501,8 @@ select[aria-invalid="true"] {
 
 .badge-disabled,
 .badge-draft,
-.badge-archived {
+.badge-archived,
+.badge-pending {
   background: var(--warn-soft);
   border-color: var(--warn);
   color: var(--warn);

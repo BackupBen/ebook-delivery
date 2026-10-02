@@ -178,7 +178,16 @@ class SettingsUpdate(_Input):
     message_template: str = Field(min_length=1, max_length=5000)
     message_template_en: str | None = Field(default=None, max_length=5000)
 
-    _blank_en = field_validator("message_template_en", mode="before")(_blank_to_none)
+    mail_subject: str | None = Field(default=None, max_length=200)
+    mail_subject_en: str | None = Field(default=None, max_length=200)
+
+    _blank_en = field_validator(
+        "message_template_en", "mail_subject", "mail_subject_en", mode="before"
+    )(_blank_to_none)
+
+
+class OrderEmail(_Input):
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class PasswordChange(_Input):
@@ -409,6 +418,8 @@ def translate_errors(errors: list[dict[str, Any]]) -> list[dict[str, str]]:
             message = template
         if field == "whop_product_id" and error.get("type") == "string_pattern_mismatch":
             message = _WHOP_HINT
+        if field == "email" and error.get("type") == "string_pattern_mismatch":
+            message = "Bitte eine gültige E-Mail-Adresse angeben."
         result.append({"field": field, "message": message})
     return result
 

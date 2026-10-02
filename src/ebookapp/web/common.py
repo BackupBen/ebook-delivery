@@ -17,6 +17,7 @@ from ..errors import AppError, Forbidden
 from ..ratelimit import RateLimiter
 from ..schemas import validation_fields
 from ..security import normalize_ip
+from ..services.orders import OrderMailer
 from ..storage import Storage
 
 
@@ -26,6 +27,7 @@ class AppContext:
     storage: Storage
     limiter: RateLimiter
     backups: BackupManager
+    mailer: OrderMailer
 
 
 def ctx(request: Request) -> AppContext:

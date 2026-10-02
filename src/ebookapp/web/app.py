@@ -22,8 +22,9 @@ from ..errors import AppError
 from ..logging_setup import configure_logging
 from ..ratelimit import RateLimiter
 from ..services import auth, misc
+from ..services.orders import OrderMailer
 from ..storage import Storage
-from . import admin, buyer, buyer_texts
+from . import admin, buyer, buyer_texts, hooks
 from .api import build_api
 from .common import AppContext, ErrorInfo
 from .middleware import CoreMiddleware
@@ -60,6 +61,12 @@ def prepare(context: AppContext) -> None:
             "PUBLIC_BASE_URL ist nicht gesetzt. Links werden aus der Anfrage abgeleitet und "
             "der Host-Header wird nicht geprüft. Für den Produktivbetrieb bitte setzen."
         )
+    if settings.whop_webhook_secret and not settings.mail_configured:
+        log.warning(
+            "WHOP_WEBHOOK_SECRET ist gesetzt, aber der E-Mail-Versand nicht eingerichtet "
+            "(BREVO_API_KEY, MAIL_FROM_EMAIL). Bestellungen werden angenommen, aber nicht "
+            "versendet."
+        )
     if not context.backups.enabled:
         log.warning("Backups sind nicht aktiv (BACKUP_PASSWORD fehlt oder restic nicht gefunden).")
     elif not context.backups.offsite_configured:
@@ -75,6 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         storage=storage,
         limiter=RateLimiter(),
         backups=BackupManager(settings, storage),
+        mailer=OrderMailer(settings),
     )
     prepare(context)
     admin.install_filters(settings.timezone)
@@ -82,9 +90,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         context.backups.start()
+        context.mailer.start()
+        context.mailer.wake()  # Liegengebliebene E-Mails nach einem Neustart versenden.
         try:
             yield
         finally:
+            context.mailer.stop()
             context.backups.stop()
 
     # Keine automatischen Weiterleitungen bei abschließendem Schrägstrich: Sie würden den
@@ -106,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.mount("/api/v1", build_api(context))
     app.include_router(buyer.router)
+    app.include_router(hooks.router)
     app.include_router(admin.router)
 
     @app.exception_handler(admin.LoginRequired)

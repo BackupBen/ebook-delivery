@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid, state_badge %}
+{% block title %}Bestellung{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/orders">Bestellungen</a> › {{ order.payment_id }}</p>
+<div class="page-head">
+  <h1>Bestellung <span class="badge badge-{{ order.status }}">{{ order.status_label }}</span></h1>
+</div>
+
+{% if order.detail %}
+<div class="alert alert-warn" role="status">
+  <p>{{ order.detail }}</p>
+  {% if order.status == "pending" and order.next_attempt_at %}<p class="small">Nächster Versuch: {{ order.next_attempt_at | dt }}</p>{% endif %}
+</div>
+{% elif order.status == "pending" and not mail_configured %}
+<div class="alert alert-warn" role="status">
+  <p>Der E-Mail-Versand ist nicht eingerichtet (<code>BREVO_API_KEY</code>, <code>MAIL_FROM_EMAIL</code>). Die E-Mail wird versendet, sobald beides gesetzt ist.</p>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <section class="card" aria-labelledby="h-facts">
+    <h2 id="h-facts">Übersicht</h2>
+    <dl class="facts">
+      <dt>Eingang</dt><dd>{{ order.created_at | dt }}</dd>
+      <dt>Käufer</dt><dd>{{ order.email or "–" }}{% if order.name %} ({{ order.name }}){% endif %}</dd>
+      <dt>Buch</dt><dd>{% if order.book %}<a href="/admin/books/{{ order.book.id }}">{{ order.book.title }}</a> <span class="muted small">({{ LANGUAGE_LABELS[order.book.language] }})</span>{% else %}–{% endif %}</dd>
+      <dt>Whop-Produkt</dt><dd>{{ order.product_title or "–" }} <span class="mono small">{{ order.product_id }}</span></dd>
+      <dt>Zahlung</dt><dd class="mono small">{{ order.payment_id }}</dd>
+      <dt>Downloadlink</dt><dd>{% if order.link %}<a href="/admin/links/{{ order.link.id }}">{{ order.link.label }}</a> {{ state_badge(order.link.state) }}, {{ order.link.download_count }} Downloads{% else %}–{% endif %}</dd>
+      <dt>Versendet</dt><dd>{{ order.sent_at | dt if order.sent_at else "–" }}</dd>
+      <dt>Versuche</dt><dd>{{ order.attempts }}</dd>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="h-actions">
+    <h2 id="h-actions">Aktionen</h2>
+    {% if order.status == "sent" %}
+    <form method="post" action="/admin/orders/{{ order.id }}/resend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <p>Der Käufer findet die E-Mail nicht oder der Link ist verloren? Der bisherige Link wird widerrufen und ein neuer versendet.</p>
+      <button class="btn" type="submit">Neuen Link senden</button>
+    </form>
+    {% else %}
+    <form method="post" action="/admin/orders/{{ order.id }}/retry">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if order.status == "unmatched" %}
+      <p>Lege ein Buch mit der Whop-Produkt-ID <code>{{ order.product_id }}</code> an und veröffentliche eine Ausgabe. Danach hier erneut verarbeiten.</p>
+      <button class="btn" type="submit">Erneut verarbeiten</button>
+      {% else %}
+      <button class="btn" type="submit">Jetzt erneut versuchen</button>
+      {% endif %}
+    </form>
+    {% endif %}
+
+    <form method="post" action="/admin/orders/{{ order.id }}/email" class="mt">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="email">E-Mail-Adresse korrigieren</label>
+        <input id="email" name="email" type="email" required maxlength="254" value="{{ order.email }}" autocomplete="off" {{ invalid(error, "email") }}>
+        {{ field_error(error, "email") }}
+        <p class="hint">Ändert die Adresse für künftige Versuche. Bei einer bereits versendeten Bestellung danach „Neuen Link senden“ wählen.</p>
+      </div>
+      <button class="btn btn-secondary" type="submit">Adresse speichern</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

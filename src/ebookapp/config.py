@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -103,6 +104,18 @@ class Settings:
     backup_keep_monthly: int
     backup_offsite_repository: str | None
     backup_offsite_env: dict[str, str] = field(default_factory=dict, repr=False)
+
+    # Whop und E-Mail-Versand (Brevo)
+    whop_webhook_secret: str | None = field(default=None, repr=False)
+    brevo_api_key: str | None = field(default=None, repr=False)
+    brevo_api_url: str = "https://api.brevo.com/v3/smtp/email"
+    mail_from_email: str | None = None
+    mail_from_name: str = ""
+    mail_reply_to: str | None = None
+
+    @property
+    def mail_configured(self) -> bool:
+        return bool(self.brevo_api_key and self.mail_from_email)
 
     @property
     def db_path(self) -> Path:
@@ -227,4 +240,24 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         backup_keep_monthly=_int(env, "BACKUP_KEEP_MONTHLY", 6, 0, 240),
         backup_offsite_repository=offsite_repo,
         backup_offsite_env=offsite_env,
+        whop_webhook_secret=env.get("WHOP_WEBHOOK_SECRET", "").strip() or None,
+        brevo_api_key=env.get("BREVO_API_KEY", "").strip() or None,
+        brevo_api_url=(
+            env.get("BREVO_API_URL", "").strip() or "https://api.brevo.com/v3/smtp/email"
+        ),
+        mail_from_email=_email(env, "MAIL_FROM_EMAIL"),
+        mail_from_name=env.get("MAIL_FROM_NAME", "").strip()[:100],
+        mail_reply_to=_email(env, "MAIL_REPLY_TO"),
     )
+
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _email(env: Mapping[str, str], name: str) -> str | None:
+    value = env.get(name, "").strip()
+    if not value:
+        return None
+    if not _EMAIL_RE.match(value) or len(value) > 254:
+        raise ConfigError(f"{name} ist keine gültige E-Mail-Adresse.")
+    return value

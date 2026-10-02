@@ -1,0 +1,78 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pagination %}
+{% block title %}Bestellungen{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Bestellungen</h1>
+</div>
+
+{% if not whop_configured or not mail_configured %}
+<div class="alert alert-warn" role="status">
+  <p><strong>Automatische Auslieferung noch nicht vollständig eingerichtet.</strong></p>
+  <ul>
+    {% if not whop_configured %}<li><code>WHOP_WEBHOOK_SECRET</code> fehlt: Zahlungen von Whop werden abgelehnt.</li>{% endif %}
+    {% if not mail_configured %}<li><code>BREVO_API_KEY</code> und <code>MAIL_FROM_EMAIL</code> fehlen: Bestellungen werden angenommen, E-Mails aber erst versendet, wenn beides gesetzt ist.</li>{% endif %}
+  </ul>
+</div>
+{% endif %}
+
+<section class="card" aria-labelledby="h-hook">
+  <h2 id="h-hook">Whop-Webhook</h2>
+  <p>In Whop unter <em>Developer → Webhooks</em> einen Webhook mit dieser Adresse und dem Ereignis <code>payment.succeeded</code> anlegen. Das dort angezeigte Geheimnis (<code>ws_…</code>) als <code>WHOP_WEBHOOK_SECRET</code> eintragen.</p>
+  <label class="visually-hidden" for="webhook-url">Webhook-Adresse</label>
+  <div class="copy-row">
+    <input id="webhook-url" type="text" readonly value="{{ webhook_url }}" class="mono" spellcheck="false">
+    <button type="button" class="btn btn-secondary" data-copy="webhook-url" data-copy-status="status-hook">Kopieren</button>
+  </div>
+  <p class="copy-status" id="status-hook" role="status" aria-live="polite"></p>
+  <p class="hint">Zugeordnet wird über die <strong>Whop-Produkt-ID</strong> des Buchs. Die Sprache der E-Mail richtet sich nach der Sprache des Buchs.</p>
+</section>
+
+<form class="card filters" method="get" action="/admin/orders" role="search" aria-label="Bestellungen durchsuchen">
+  <div class="field field-wide">
+    <label for="q">Suche</label>
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="E-Mail-Adresse, Zahlungs-ID oder Produkt-ID">
+  </div>
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Alle</option>
+      {% for key, label in ORDER_STATUS_LABELS.items() %}
+      <option value="{{ key }}" {% if key == status %}selected{% endif %}>{{ label }}{% if counts.get(key) %} ({{ counts[key] }}){% endif %}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="submit">Filtern</button>
+</form>
+
+<div class="card">
+  {% if result["items"] %}
+  <p class="muted small">{{ result.total }} {{ "Bestellung" if result.total == 1 else "Bestellungen" }}</p>
+  <div class="table-wrap">
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th scope="col">Eingang</th>
+          <th scope="col">Käufer</th>
+          <th scope="col">Buch</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in result["items"] %}
+        <tr>
+          <td class="primary"><a href="/admin/orders/{{ order.id }}">{{ order.created_at | dt }}</a></td>
+          <td data-label="Käufer">{{ order.email or "–" }}{% if order.name %} <span class="muted small">({{ order.name }})</span>{% endif %}</td>
+          <td data-label="Buch">{% if order.book %}{{ order.book.title }}{% else %}<span class="muted">{{ order.product_title or order.product_id or "–" }}</span>{% endif %}</td>
+          <td data-label="Status"><span class="badge badge-{{ order.status }}">{{ order.status_label }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(result, page, page_size, "q=" ~ (q | urlencode) ~ "&status=" ~ status) }}
+  {% else %}
+  <p>{% if q or status %}Keine Bestellungen gefunden, die zu den Filtern passen.{% else %}Noch keine Bestellungen eingegangen.{% endif %}</p>
+  {% endif %}
+</div>
+{% endblock %}

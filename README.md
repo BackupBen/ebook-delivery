@@ -1,12 +1,14 @@
 # E-Book-Auslieferung
 
 Eine kleine Webanwendung, die gekaufte E-Books (PDF und EPUB) über persönliche
-Downloadlinks ausliefert. Verkauf und Zahlung finden woanders statt; diese App übernimmt
-nur die Datei-Auslieferung.
+Downloadlinks ausliefert. Verkauf und Zahlung finden woanders statt (z. B. Whop); diese App
+übernimmt die Auslieferung: nach einer Zahlung in Whop auf Wunsch vollautomatisch per E-Mail.
 
 - **Verwaltung** (`/admin`): Bücher, Ausgaben, Cover, Downloadlinks, API-Schlüssel, Backups.
 - **Käuferseite** (`/d/<code>`): Titel, Cover, Download ohne Konto und ohne Tracking.
 - **REST-API** (`/api/v1`): dieselben Funktionen für Automatisierungen.
+- **Whop-Webhook** (`/webhooks/whop`): erzeugt nach einer Zahlung den Link und versendet ihn
+  über Brevo, siehe [docs/WHOP.md](docs/WHOP.md).
 
 Eine App, eine SQLite-Datenbank, ein Container. Kein Shop, keine Registrierung, keine
 Zahlungsabwicklung.
@@ -17,6 +19,7 @@ Zahlungsabwicklung.
 |---|---|
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment in Coolify oder mit Docker Compose, Updates |
 | [docs/BACKUP-RESTORE.md](docs/BACKUP-RESTORE.md) | Backups, externes Ziel, Wiederherstellung |
+| [docs/WHOP.md](docs/WHOP.md) | Automatische Auslieferung nach Zahlungen in Whop (E-Mail über Brevo) |
 | [docs/API.md](docs/API.md) | API mit curl-Beispielen |
 | [docs/SICHERHEIT.md](docs/SICHERHEIT.md) | Sicherheitskonzept, Zählweise der Downloads, Grenzen |
 | [docs/openapi.json](docs/openapi.json) | OpenAPI-Spezifikation |
@@ -30,8 +33,9 @@ Zahlungsabwicklung.
 2. **Ausgabe veröffentlichen.** Veröffentlichte Ausgaben sind unveränderlich.
 3. **Downloadlink erstellen.** Der Link gilt für genau ein Buch. Ohne weitere Angaben ist
    er dauerhaft gültig und unbegrenzt nutzbar; Ablaufdatum und Downloadlimit sind optional.
-4. **Link versenden.** Die App zeigt den Link und eine Versandnachricht zum Kopieren. Sie
-   verschickt selbst nichts.
+4. **Link versenden.** Die App zeigt den Link und eine Versandnachricht zum Kopieren. Für
+   Käufe über Whop erledigt die App Schritt 3 und 4 selbst und schickt die E-Mail über Brevo
+   (siehe [docs/WHOP.md](docs/WHOP.md)).
 5. **Bei Bedarf** einen Link deaktivieren (umkehrbar) oder widerrufen (endgültig).
 
 Zwei Dinge sollte man wissen:
@@ -75,6 +79,8 @@ oder Secrets. Die wichtigsten:
 | `ADMIN_PASSWORD` | Legt beim ersten Start den Administrator an (mindestens 12 Zeichen). |
 | `BACKUP_PASSWORD` | Aktiviert und verschlüsselt die Backups. |
 | `BACKUP_OFFSITE_REPOSITORY` | Externes Backup-Ziel im restic-Format. Ohne Wert gibt es nur lokale Backups. |
+| `WHOP_WEBHOOK_SECRET` | Geheimnis des Whop-Webhooks (`ws_…`). Aktiviert `/webhooks/whop`. |
+| `BREVO_API_KEY`, `MAIL_FROM_EMAIL` | E-Mail-Versand über Brevo für Whop-Bestellungen. |
 
 Die vollständige Liste mit Standardwerten steht in [.env.example](.env.example).
 

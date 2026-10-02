@@ -7,15 +7,15 @@ import json
 import re
 import sqlite3
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, timedelta, tzinfo
 from typing import Any
 
 from ..config import MB, Settings
-from ..db import iso, now_iso, now_utc, transaction
+from ..db import iso, now_iso, now_utc, parse_iso, transaction
 from ..errors import Conflict, Invalid, field_error
 from ..schemas import SettingsUpdate
 
-DEFAULT_MESSAGE_TEMPLATE = """Hallo,
+DEFAULT_MESSAGE_TEMPLATE = """Hallo {name},
 
 vielen Dank für deinen Kauf! Hier ist dein persönlicher Downloadlink für „{titel}“:
 
@@ -26,7 +26,7 @@ Bitte bewahre den Link gut auf und gib ihn nicht weiter.
 
 Viele Grüße"""
 
-DEFAULT_MESSAGE_TEMPLATE_EN = """Hi,
+DEFAULT_MESSAGE_TEMPLATE_EN = """Hi {name},
 
 thank you for your purchase! Here is your personal download link for "{titel}":
 
@@ -85,6 +85,39 @@ def get_limits(conn: sqlite3.Connection, settings: Settings) -> Limits:
     )
 
 
+def get_mail_subject(conn: sqlite3.Connection, language: str = "de") -> str:
+    from .mail import DEFAULT_SUBJECTS
+
+    key = "mail_subject_en" if language == "en" else "mail_subject"
+    return _get(conn, key) or DEFAULT_SUBJECTS["en" if language == "en" else "de"]
+
+
+def validity_text(link: dict[str, Any], language: str, timezone: tzinfo) -> str:
+    """Satz zur Gültigkeit eines Links für Versandnachricht und E-Mail."""
+    from ..web.buyer_texts import format_datetime
+
+    english = language == "en"
+    parts = []
+    if link["expires_at"]:
+        local = parse_iso(link["expires_at"]).astimezone(timezone)
+        date_text = format_datetime(local, language)
+        parts.append(
+            f"The link is valid until {date_text}."
+            if english
+            else f"Der Link ist bis zum {date_text} gültig."
+        )
+    else:
+        parts.append("The link does not expire." if english else "Der Link ist dauerhaft gültig.")
+    if link["max_downloads"]:
+        count = link["max_downloads"]
+        parts.append(
+            f"It can be used for up to {count} download{'s' if count != 1 else ''}."
+            if english
+            else f"Er kann für höchstens {count} Downloads verwendet werden."
+        )
+    return " ".join(parts)
+
+
 def get_message_template(conn: sqlite3.Connection, language: str = "de") -> str:
     if language == "en":
         return _get(conn, "message_template_en") or DEFAULT_MESSAGE_TEMPLATE_EN
@@ -110,15 +143,19 @@ def update_settings(conn: sqlite3.Connection, settings: Settings, data: Settings
         _set(conn, "max_epub_mb", str(data.max_epub_mb))
         _set(conn, "max_cover_mb", str(data.max_cover_mb))
         _set(conn, "message_template", data.message_template)
-        # Leer bedeutet: die mitgelieferte englische Vorlage verwenden.
+        # Leer bedeutet: die mitgelieferte Vorlage verwenden.
         _set(conn, "message_template_en", data.message_template_en or "")
+        if data.mail_subject is not None:
+            _set(conn, "mail_subject", data.mail_subject)
+        if data.mail_subject_en is not None:
+            _set(conn, "mail_subject_en", data.mail_subject_en)
 
 
-def render_message(template: str, *, title: str, url: str, validity: str) -> str:
+def render_message(template: str, *, title: str, url: str, validity: str, name: str = "") -> str:
     """Füllt die Versandnachricht. Bewusst ohne str.format, damit Vorlagen nichts auslösen."""
-    text = template.replace("{titel}", title).replace("{link}", url)
-    text = text.replace("{gueltigkeit}", validity)
-    return re.sub(r"\n{3,}", "\n\n", text).strip() + "\n"
+    from .mail import fill
+
+    return fill(template, title=title, url=url, validity=validity, name=name)
 
 
 # ---------------------------------------------------------------------------
@@ -296,6 +333,10 @@ def download_stats(
 def housekeeping(conn: sqlite3.Connection, settings: Settings) -> None:
     """Entfernt abgelaufene Sitzungen, Idempotenz-Einträge und Download-Fingerabdrücke."""
     now = now_utc()
+    # Erkannte Webhook-Zustellungen: Whop wiederholt höchstens etwa drei Tage lang.
+    conn.execute(
+        "DELETE FROM webhook_events WHERE received_at < ?", (iso(now - timedelta(days=30)),)
+    )
     conn.execute("DELETE FROM sessions WHERE expires_at < ?", (now_iso(),))
     conn.execute(
         "DELETE FROM idempotency_keys WHERE created_at < ?",

@@ -31,7 +31,7 @@
   <div class="field">
     <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
     <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ values.whop_product_id or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
-    <p class="hint">Wird nur zur Zuordnung gespeichert. Es gibt noch keine Verbindung zu Whop.</p>
+    <p class="hint">Ordnet Zahlungen aus Whop diesem Buch zu: Käufer erhalten den Link dann automatisch per E-Mail.</p>
     {{ field_error(error, "whop_product_id") }}
   </div>
   <div class="row">
