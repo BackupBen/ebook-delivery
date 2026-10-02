@@ -734,3 +734,55 @@ form + details,
 details + details {
   margin-top: 0.7rem;
 }
+
+/* Swagger UI kennt nur ein helles Farbschema. Damit Text und Bedienelemente auch im
+   dunklen Modus lesbar bleiben, steht die Dokumentation immer auf einer hellen Fläche. */
+.api-docs {
+  color-scheme: light;
+  --surface: #ffffff;
+  --surface-2: #f0eee8;
+  --text: #1c1b19;
+  --muted: #5c5a55;
+  --border: #d9d5cb;
+  --accent: #1f5f56;
+  --accent-text: #ffffff;
+  --accent-soft: #e2efec;
+  --focus: #0b57d0;
+  background: #ffffff;
+  color: #1c1b19;
+  padding: 0.5rem 1.25rem 1.25rem;
+}
+
+.api-docs .swagger-ui .info {
+  margin: 1.25rem 0;
+}
+
+.api-docs .swagger-ui .info .title {
+  color: #1c1b19;
+}
+
+.api-docs .swagger-ui .info p,
+.api-docs .swagger-ui .info li,
+.api-docs .swagger-ui .info table,
+.api-docs .swagger-ui .markdown p,
+.api-docs .swagger-ui .renderedMarkdown p {
+  color: #2b2a27;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.api-docs .swagger-ui .info h2,
+.api-docs .swagger-ui .info h3 {
+  color: #1c1b19;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.api-docs .swagger-ui .info code,
+.api-docs .swagger-ui .markdown code,
+.api-docs .swagger-ui .renderedMarkdown code {
+  background: #f0eee8;
+  border-radius: 4px;
+  color: #1f5f56;
+  font-size: 0.88em;
+  padding: 0.1em 0.35em;
+}
