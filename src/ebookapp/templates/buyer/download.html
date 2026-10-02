@@ -1,0 +1,37 @@
+{% extends "buyer/base.html" %}
+{% block title %}{{ title }} – Download{% endblock %}
+{% block content %}
+<div class="buyer-head">
+  {% if cover_url %}<img class="buyer-cover" src="{{ cover_url }}" alt="Cover von {{ title }}">{% endif %}
+  <div class="buyer-title">
+    <p class="muted small">Dein E-Book</p>
+    <h1>{{ title }}</h1>
+    {% if description %}<p class="buyer-desc">{{ description }}</p>{% endif %}
+  </div>
+</div>
+
+{% if files %}
+<h2 id="h-downloads">Herunterladen</h2>
+<ul class="downloads" aria-labelledby="h-downloads">
+  {% for file in files %}
+  <li>
+    <a class="download" href="{{ file.url }}" download rel="nofollow">
+      <span><strong>{{ file.label }} herunterladen</strong><span>{{ file.hint }}</span></span>
+      <span class="size">{{ file.size_bytes | filesize }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="alert alert-warn" role="status">
+  <p>Für diesen Link stehen im Moment keine Dateien bereit. Bitte wende dich an den Verkäufer.</p>
+</div>
+{% endif %}
+
+<div class="buyer-note">
+  {% if expires_local %}<p>Dieser Link ist bis zum {{ expires_local.strftime("%d.%m.%Y, %H:%M Uhr") }} gültig.</p>{% endif %}
+  {% if remaining is not none %}<p>Verbleibende Downloads: {{ remaining }}. Ein unterbrochener Download kann fortgesetzt werden, ohne erneut zu zählen.</p>{% endif %}
+  <p>Dieser Link ist für dich persönlich bestimmt. Jeder, der ihn kennt, kann die Dateien herunterladen. Bewahre ihn daher gut auf und gib ihn nicht weiter.</p>
+  <p>Speichere die Dateien nach dem Herunterladen auf deinem Gerät.</p>
+</div>
+{% endblock %}

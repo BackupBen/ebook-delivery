@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pagination, formats_text %}
+{% block title %}Bücher{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Bücher</h1>
+  <a class="btn" href="/admin/books/new">Neues Buch</a>
+</div>
+
+<form class="card filters" method="get" action="/admin/books" role="search" aria-label="Bücher durchsuchen">
+  <div class="field field-wide">
+    <label for="q">Suche</label>
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="Titel, Beschreibung oder Whop-ID">
+  </div>
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="active" {% if status == "active" %}selected{% endif %}>Aktiv</option>
+      <option value="archived" {% if status == "archived" %}selected{% endif %}>Archiviert</option>
+      <option value="all" {% if status == "all" %}selected{% endif %}>Alle</option>
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="submit">Filtern</button>
+</form>
+
+<div class="card">
+  {% if result["items"] %}
+  <p class="muted small">{{ result.total }} {{ "Buch" if result.total == 1 else "Bücher" }}</p>
+  <div class="table-wrap">
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th scope="col">Titel</th>
+          <th scope="col">Aktuelle Ausgabe</th>
+          <th scope="col">Formate</th>
+          <th scope="col" class="num">Links (aktiv / gesamt)</th>
+          <th scope="col" class="num">Downloads</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for book in result["items"] %}
+        <tr>
+          <td class="primary"><a href="/admin/books/{{ book.id }}">{{ book.title }}</a>
+            {% if book.whop_product_id %}<br><span class="muted small mono">{{ book.whop_product_id }}</span>{% endif %}</td>
+          <td data-label="Aktuelle Ausgabe">
+            {% if book.current_edition %}Nr. {{ book.current_edition.number }}{% else %}<span class="badge badge-draft">noch nicht veröffentlicht</span>{% endif %}
+            {% if book.draft_edition and book.current_edition %}<br><span class="muted small">Entwurf Nr. {{ book.draft_edition.number }}</span>{% endif %}
+          </td>
+          <td data-label="Formate">{{ formats_text(book.current_edition.files if book.current_edition else []) }}</td>
+          <td data-label="Links (aktiv / gesamt)" class="num">{{ book.links.active }} / {{ book.links.total }}</td>
+          <td data-label="Downloads" class="num">{{ book.downloads_total }}</td>
+          <td data-label="Status">{% if book.status == "archived" %}<span class="badge badge-archived">archiviert</span>{% else %}<span class="badge badge-active">aktiv</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(result, page, page_size, "q=" ~ (q | urlencode) ~ "&status=" ~ status) }}
+  {% else %}
+  <p>{% if q or status != "active" %}Keine Bücher gefunden, die zu den Filtern passen.{% else %}Noch keine Bücher vorhanden.{% endif %}</p>
+  <p><a class="btn" href="/admin/books/new">Erstes Buch anlegen</a></p>
+  {% endif %}
+</div>
+{% endblock %}

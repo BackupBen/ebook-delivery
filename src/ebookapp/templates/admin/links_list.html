@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pagination, state_badge %}
+{% block title %}Downloadlinks{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Downloadlinks</h1>
+  <a class="btn" href="/admin/links/new{% if book_id %}?book_id={{ book_id }}{% endif %}">Neuer Link</a>
+</div>
+
+<form class="card filters" method="get" action="/admin/links" role="search" aria-label="Links durchsuchen">
+  <div class="field field-wide">
+    <label for="q">Suche</label>
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="Bezeichnung, Buchtitel oder Link-ID">
+  </div>
+  <div class="field">
+    <label for="book_id">Buch</label>
+    <select id="book_id" name="book_id">
+      <option value="">Alle Bücher</option>
+      {% for book in all_books %}
+      <option value="{{ book.id }}" {% if book.id == book_id %}selected{% endif %}>{{ book.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="state">Zustand</label>
+    <select id="state" name="state">
+      <option value="">Alle</option>
+      {% for key, label in STATE_LABELS.items() %}
+      <option value="{{ key }}" {% if key == state %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="submit">Filtern</button>
+</form>
+
+<div class="card">
+  {% if result["items"] %}
+  <p class="muted small">{{ result.total }} {{ "Link" if result.total == 1 else "Links" }}</p>
+  <div class="table-wrap">
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th scope="col">Bezeichnung</th>
+          <th scope="col">Buch</th>
+          <th scope="col">Formate</th>
+          <th scope="col">Zustand</th>
+          <th scope="col" class="num">Downloads</th>
+          <th scope="col">Läuft ab</th>
+          <th scope="col">Erstellt</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for link in result["items"] %}
+        <tr>
+          <td class="primary"><a href="/admin/links/{{ link.id }}">{{ link.label or "Ohne Bezeichnung" }}</a></td>
+          <td data-label="Buch">{{ link.book_title }} <span class="muted small">(Ausgabe {{ link.edition_number }})</span></td>
+          <td data-label="Formate">{{ link.formats | join(", ") | upper }}</td>
+          <td data-label="Zustand">{{ state_badge(link.state) }}</td>
+          <td data-label="Downloads" class="num">{{ link.download_count }}{% if link.max_downloads %} / {{ link.max_downloads }}{% endif %}</td>
+          <td data-label="Läuft ab">{{ link.expires_at | dt if link.expires_at else "nie" }}</td>
+          <td data-label="Erstellt">{{ link.created_at | dt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(result, page, page_size, "q=" ~ (q | urlencode) ~ "&state=" ~ state ~ "&book_id=" ~ (book_id | urlencode)) }}
+  {% else %}
+  <p>{% if q or state or book_id %}Keine Links gefunden, die zu den Filtern passen.{% else %}Noch keine Downloadlinks vorhanden.{% endif %}</p>
+  {% endif %}
+</div>
+
+<form class="card" method="post" action="/admin/links/lookup">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <h2>Link prüfen</h2>
+  <div class="field">
+    <label for="code">Link oder Code eines Käufers</label>
+    <div class="copy-row">
+      <input id="code" name="code" type="text" required maxlength="2048" autocomplete="off" spellcheck="false" placeholder="https://…/d/…">
+      <button class="btn btn-secondary" type="submit">Prüfen</button>
+    </div>
+    <p class="hint">Füge einen vollständigen Downloadlink ein, um den zugehörigen Eintrag zu finden. Der Link wird nicht gespeichert und nicht protokolliert.</p>
+  </div>
+</form>
+{% endblock %}

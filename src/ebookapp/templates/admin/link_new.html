@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid %}
+{% block title %}Neuer Downloadlink{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/links">Downloadlinks</a> › Neuer Link</p>
+<h1>Neuer Downloadlink</h1>
+{% if not books %}
+<div class="alert alert-info" role="status">
+  <p>Es gibt noch kein aktives Buch mit veröffentlichter Ausgabe. Lade zuerst Dateien hoch und veröffentliche eine Ausgabe.</p>
+  <p><a class="btn btn-secondary" href="/admin/books">Zu den Büchern</a></p>
+</div>
+{% else %}
+<form class="card" method="post" action="/admin/links">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="form_token" value="{{ form_token }}">
+  <div class="field">
+    <label for="book_id">Buch</label>
+    <select id="book_id" name="book_id" required {{ invalid(error, "book_id") }}>
+      <option value="">Bitte wählen …</option>
+      {% for book in books %}
+      <option value="{{ book.id }}" {% if book.id == values.book_id %}selected{% endif %}>{{ book.title }} (Ausgabe {{ book.current_edition.number }}: {% for f in book.current_edition.files %}{{ f.format | upper }}{% if not loop.last %}, {% endif %}{% endfor %})</option>
+      {% endfor %}
+    </select>
+    <p class="hint">Der Link gilt für genau dieses Buch und wird an dessen aktuelle Ausgabe gebunden.</p>
+    {{ field_error(error, "book_id") }}
+  </div>
+  <fieldset>
+    <legend>Freigegebene Formate</legend>
+    <label class="check"><input type="checkbox" name="formats" value="pdf" {% if "pdf" in (values.formats or []) %}checked{% endif %}> <span>PDF</span></label>
+    <label class="check"><input type="checkbox" name="formats" value="epub" {% if "epub" in (values.formats or []) %}checked{% endif %}> <span>EPUB</span></label>
+    <p class="hint">Angeboten werden nur Formate, die in der Ausgabe vorhanden sind.</p>
+    {{ field_error(error, "formats") }}
+  </fieldset>
+  <div class="field">
+    <label for="label">Interne Bezeichnung <span class="muted">(optional)</span></label>
+    <input id="label" name="label" type="text" maxlength="200" value="{{ values.label or '' }}" placeholder="z. B. Whop-Bestellung 1042" {{ invalid(error, "label") }}>
+    <p class="hint">Nur für dich sichtbar. Eine Bestellnummer genügt; Namen oder E-Mail-Adressen sind nicht nötig.</p>
+    {{ field_error(error, "label") }}
+  </div>
+  <fieldset>
+    <legend>Einschränkungen <span class="muted">(optional)</span></legend>
+    <p class="hint">Ohne Angaben ist der Link dauerhaft gültig und erlaubt beliebig viele Downloads.</p>
+    <div class="field">
+      <label for="expires_at">Ablaufdatum</label>
+      <input id="expires_at" name="expires_at" type="datetime-local" value="{{ values.expires_at or '' }}" {{ invalid(error, "expires_at") }}>
+      <p class="hint">Zeitzone: {{ timezone_name }}</p>
+      {{ field_error(error, "expires_at") }}
+    </div>
+    <div class="field">
+      <label for="max_downloads">Downloadlimit</label>
+      <input id="max_downloads" name="max_downloads" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="{{ values.max_downloads or '' }}" {{ invalid(error, "max_downloads") }}>
+      <p class="hint">Gezählt wird jeder begonnene Download einer Datei. Fortsetzungen und Teilabrufe vom selben Internetanschluss zählen nicht erneut.</p>
+      {{ field_error(error, "max_downloads") }}
+    </div>
+  </fieldset>
+  <div class="alert alert-info">
+    <p>Der Link wird nur direkt nach dem Erstellen angezeigt, weil er nur als Prüfsumme gespeichert wird. Wer den Link kennt, kann die Dateien laden. Ein Link lässt sich weitergeben; einen vollständigen Kopierschutz gibt es nicht.</p>
+  </div>
+  <div class="row">
+    <button class="btn" type="submit">Link erstellen</button>
+    <a class="btn btn-secondary" href="/admin/links">Abbrechen</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

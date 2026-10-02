@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}API-Schlüssel erstellt{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/settings#api-keys">Einstellungen</a> › API-Schlüssel erstellt</p>
+<h1>API-Schlüssel erstellt</h1>
+<div class="alert alert-warn" role="status">
+  <p><strong>Kopiere den Schlüssel jetzt.</strong> Er wird nur auf dieser Seite angezeigt und lässt sich später nicht mehr abrufen.</p>
+</div>
+<section class="card">
+  <label for="api-key">Schlüssel „{{ key.name }}“</label>
+  <div class="copy-row">
+    <input id="api-key" type="text" readonly value="{{ secret }}" class="mono" spellcheck="false" autocomplete="off">
+    <button type="button" class="btn" data-copy="api-key" data-copy-status="status-key">Kopieren</button>
+  </div>
+  <p class="copy-status" id="status-key" role="status" aria-live="polite"></p>
+  <dl class="facts small">
+    <dt>Berechtigungen</dt><dd>{% for scope in key.scopes %}{{ SCOPE_LABELS[scope] }}{% if not loop.last %}, {% endif %}{% endfor %}</dd>
+    <dt>Verwendung</dt><dd>Header <code>Authorization: Bearer &lt;Schlüssel&gt;</code></dd>
+  </dl>
+  <p><a class="btn btn-secondary" href="/admin/settings#api-keys">Zurück zu den Einstellungen</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>{% block title %}Verwaltung{% endblock %} · E-Book-Auslieferung</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+  {% if session %}
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/admin/books">E-Book-Auslieferung</a>
+      <nav aria-label="Hauptnavigation">
+        <ul class="nav">
+          <li><a href="/admin/books" {% if nav == "books" %}aria-current="page"{% endif %}>Bücher</a></li>
+          <li><a href="/admin/links" {% if nav == "links" %}aria-current="page"{% endif %}>Downloadlinks</a></li>
+          <li><a href="/admin/settings" {% if nav == "settings" %}aria-current="page"{% endif %}>Einstellungen &amp; Backups</a></li>
+          <li><a href="/api/v1/docs" {% if nav == "api" %}aria-current="page"{% endif %}>API</a></li>
+        </ul>
+      </nav>
+      <form method="post" action="/admin/logout" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-secondary btn-small" type="submit">Abmelden ({{ session.username }})</button>
+      </form>
+    </div>
+  </header>
+  {% endif %}
+  <main id="inhalt" class="{% block main_class %}{% endblock %}">
+    {% from "admin/_macros.html" import error_box %}
+    {{ error_box(error, request_id, now_text) }}
+    {% for item in flash %}
+    <div class="alert alert-{{ 'success' if item.kind == 'success' else 'info' }}" role="status">
+      <p>{{ item.message }}</p>
+    </div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% block title %}API-Dokumentation{% endblock %}
+{% block content %}
+<h1>API-Dokumentation</h1>
+<p class="muted">Interaktive Dokumentation der REST-API unter <code>/api/v1</code>. Zum Ausprobieren oben rechts auf „Authorize“ klicken und einen API-Schlüssel aus den <a href="/admin/settings#api-keys">Einstellungen</a> eintragen. Die Spezifikation liegt unter <a href="/api/v1/openapi.json">/api/v1/openapi.json</a>.</p>
+<link rel="stylesheet" href="/static/vendor/swagger-ui/swagger-ui.css">
+<div class="card">
+  <div id="swagger-ui"><noscript>Die interaktive Dokumentation benötigt JavaScript. Die Spezifikation ist auch ohne JavaScript unter /api/v1/openapi.json abrufbar.</noscript></div>
+</div>
+<script src="/static/vendor/swagger-ui/swagger-ui-bundle.js" defer></script>
+<script src="/static/swagger-init.js" defer></script>
+{% endblock %}

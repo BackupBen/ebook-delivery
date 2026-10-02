@@ -1,0 +1,73 @@
+# E-Book-Auslieferung als einzelner Container.
+#
+# Geeignet für Coolify (Ressource „Docker Compose“) und für `docker compose` auf jedem Host.
+# Domain, Image-Name und Secrets stehen nicht in dieser Datei, sondern kommen aus der
+# Umgebung (in Coolify: „Environment Variables“ der Ressource, sonst eine .env-Datei).
+#
+# Der Reverse Proxy (in Coolify: Traefik) übernimmt HTTPS und leitet auf Port 8000 weiter.
+# Es wird absichtlich kein Port auf dem Host veröffentlicht.
+
+services:
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE fehlt, z. B. ghcr.io/KONTO/REPOSITORY:latest}
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+          pids: 256
+    expose:
+      - "8000"
+    environment:
+      # --- erforderlich ---------------------------------------------------------------
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL fehlt, z. B. https://ebooks.example.com}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY fehlt (mindestens 32 zufällige Zeichen)}
+      # --- nur für den ersten Start; danach entfernen ---------------------------------
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # --- Backups --------------------------------------------------------------------
+      BACKUP_PASSWORD: ${BACKUP_PASSWORD:-}
+      BACKUP_HOUR: ${BACKUP_HOUR:-3}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-6}
+      # Externes Ziel: bleibt leer, bis ein Speicher ausdrücklich eingerichtet ist.
+      BACKUP_OFFSITE_REPOSITORY: ${BACKUP_OFFSITE_REPOSITORY:-}
+      BACKUP_OFFSITE_PASSWORD: ${BACKUP_OFFSITE_PASSWORD:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      # --- optional -------------------------------------------------------------------
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Berlin}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-512}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ebook-data:/data
+      - ebook-backups:/backups
+    healthcheck:
+      test: ["CMD", "ebookctl", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  # Datenbank und Buchdateien
+  ebook-data:
+  # Lokale Backups (restic). Ersetzt kein externes Backup.
+  ebook-backups:

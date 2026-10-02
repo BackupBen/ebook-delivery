@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid %}
+{% block title %}Neues Buch{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/books">Bücher</a> › Neues Buch</p>
+<h1>Neues Buch</h1>
+<form class="card" method="post" action="/admin/books">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="field">
+    <label for="title">Titel</label>
+    <input id="title" name="title" type="text" required maxlength="200" value="{{ values.title or '' }}" {{ invalid(error, "title") }}>
+    {{ field_error(error, "title") }}
+  </div>
+  <div class="field">
+    <label for="description">Beschreibung <span class="muted">(optional)</span></label>
+    <textarea id="description" name="description" maxlength="5000" {{ invalid(error, "description") }}>{{ values.description or '' }}</textarea>
+    <p class="hint">Wird auf der Downloadseite unter dem Titel angezeigt.</p>
+    {{ field_error(error, "description") }}
+  </div>
+  <div class="field">
+    <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
+    <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ values.whop_product_id or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
+    <p class="hint">Wird nur zur Zuordnung gespeichert. Es gibt noch keine Verbindung zu Whop.</p>
+    {{ field_error(error, "whop_product_id") }}
+  </div>
+  <div class="row">
+    <button class="btn" type="submit">Buch anlegen</button>
+    <a class="btn btn-secondary" href="/admin/books">Abbrechen</a>
+  </div>
+  <p class="hint">Dateien und Cover lädst du im nächsten Schritt hoch.</p>
+</form>
+{% endblock %}

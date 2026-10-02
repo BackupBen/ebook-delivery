@@ -1,0 +1,277 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid, state_badge, formats_text %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/books">Bücher</a> › {{ book.title }}</p>
+<div class="page-head">
+  <h1>{{ book.title }}
+    {% if book.status == "archived" %}<span class="badge badge-archived">archiviert</span>{% endif %}
+  </h1>
+  {% if book.current_edition and book.status == "active" %}
+  <a class="btn" href="/admin/links/new?book_id={{ book.id }}">Downloadlink erstellen</a>
+  {% endif %}
+</div>
+
+{% if not book.current_edition %}
+<div class="alert alert-info" role="status">
+  <p><strong>Noch nicht veröffentlicht.</strong> Lade unten ein PDF und/oder EPUB in den Entwurf und veröffentliche die Ausgabe. Erst danach kannst du Downloadlinks erstellen.</p>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <section class="card" aria-labelledby="h-meta">
+    <h2 id="h-meta">Angaben</h2>
+    <form method="post" action="/admin/books/{{ book.id }}/edit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="title">Titel</label>
+        <input id="title" name="title" type="text" required maxlength="200" value="{{ values.title if values.title is defined else book.title }}" {{ invalid(error, "title") }}>
+        {{ field_error(error, "title") }}
+      </div>
+      <div class="field">
+        <label for="description">Beschreibung <span class="muted">(optional)</span></label>
+        <textarea id="description" name="description" maxlength="5000" {{ invalid(error, "description") }}>{{ values.description if values.description is defined else book.description }}</textarea>
+        {{ field_error(error, "description") }}
+      </div>
+      <div class="field">
+        <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
+        <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ (values.whop_product_id if values.whop_product_id is defined else book.whop_product_id) or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
+        {{ field_error(error, "whop_product_id") }}
+      </div>
+      <button class="btn" type="submit">Angaben speichern</button>
+    </form>
+    <dl class="facts small mt">
+      <dt>Buch-ID</dt><dd class="mono">{{ book.id }}</dd>
+      <dt>Angelegt</dt><dd>{{ book.created_at | dt }}</dd>
+      <dt>Downloads gesamt</dt><dd>{{ book.downloads_total }}</dd>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="h-cover">
+    <h2 id="h-cover">Cover <span class="muted">(optional)</span></h2>
+    {% if book.has_cover %}
+    <p><img class="cover-thumb" src="/admin/books/{{ book.id }}/cover?v={{ book.updated_at | urlencode }}" alt="Cover von {{ book.title }}"></p>
+    {% else %}
+    <p class="muted">Kein Cover hinterlegt.</p>
+    {% endif %}
+    <form method="post" action="/admin/books/{{ book.id }}/cover" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="cover">{{ "Cover ersetzen" if book.has_cover else "Cover hochladen" }}</label>
+        <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required {{ invalid(error, "cover") }}>
+        <p class="hint">JPEG, PNG oder WebP, höchstens {{ limits.cover_mb }} MB. Das Bild wird verkleinert und ohne Metadaten gespeichert.</p>
+        {{ field_error(error, "cover") }}
+      </div>
+      <button class="btn btn-secondary" type="submit">Cover speichern</button>
+    </form>
+    {% if book.has_cover %}
+    <form method="post" action="/admin/books/{{ book.id }}/cover/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-secondary btn-small" type="submit">Cover entfernen</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card" aria-labelledby="h-editions">
+  <h2 id="h-editions">Ausgaben und Dateien</h2>
+  <p class="muted small">Veröffentlichte Ausgaben sind unveränderlich. Für geänderte Dateien legst du eine neue Ausgabe an. Jeder Downloadlink ist fest an eine Ausgabe gebunden.</p>
+
+  {% for edition in editions %}
+  <div class="edition">
+    <h3>Ausgabe {{ edition.number }}
+      {% if edition.status == "draft" %}<span class="badge badge-draft">Entwurf</span>
+      {% elif edition.is_current %}<span class="badge badge-published">aktuell</span>
+      {% else %}<span class="badge">frühere Ausgabe</span>{% endif %}
+    </h3>
+    <p class="small muted">
+      {% if edition.published_at %}Veröffentlicht am {{ edition.published_at | dt }} · {% endif %}
+      {{ edition.links_count }} {{ "Link" if edition.links_count == 1 else "Links" }} an diese Ausgabe gebunden
+      {% if edition.note %} · Notiz: {{ edition.note }}{% endif %}
+    </p>
+
+    {% if edition.files %}
+    <div class="table-wrap">
+      <table class="responsive">
+        <thead><tr><th scope="col">Format</th><th scope="col">Dateiname</th><th scope="col" class="num">Größe</th><th scope="col">SHA-256</th><th scope="col">Aktionen</th></tr></thead>
+        <tbody>
+          {% for file in edition.files %}
+          <tr>
+            <td class="primary">{{ file.format | upper }}</td>
+            <td data-label="Dateiname">{{ file.original_filename }}</td>
+            <td data-label="Größe" class="num nowrap">{{ file.size_bytes | filesize }}</td>
+            <td data-label="SHA-256"><span class="mono small" title="{{ file.sha256 }}">{{ file.sha256[:16] }}…</span></td>
+            <td data-label="Aktionen">
+              <a class="btn btn-secondary btn-small" href="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files/{{ file.format }}">Prüfen</a>
+              {% if edition.status == "draft" %}
+              <form class="inline-form" method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files/{{ file.format }}/delete">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-secondary btn-small" type="submit">Entfernen</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="muted">Noch keine Dateien.</p>
+    {% endif %}
+
+    {% if edition.status == "draft" %}
+    <form class="stack" method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <fieldset>
+        <legend>Dateien hochladen oder ersetzen</legend>
+        <div class="grid-2">
+          <div class="field">
+            <label for="pdf-{{ edition.id }}">PDF</label>
+            <input id="pdf-{{ edition.id }}" name="pdf" type="file" accept=".pdf,application/pdf" {{ invalid(error, "pdf") }}>
+            <p class="hint">Höchstens {{ limits.pdf_mb }} MB.</p>
+            {{ field_error(error, "pdf") }}
+          </div>
+          <div class="field">
+            <label for="epub-{{ edition.id }}">EPUB</label>
+            <input id="epub-{{ edition.id }}" name="epub" type="file" accept=".epub,application/epub+zip" {{ invalid(error, "epub") }}>
+            <p class="hint">Höchstens {{ limits.epub_mb }} MB.</p>
+            {{ field_error(error, "epub") }}
+          </div>
+        </div>
+        <button class="btn btn-secondary" type="submit">Hochladen</button>
+        <p class="hint">Große Dateien brauchen einen Moment. Bitte die Seite währenddessen nicht schließen.</p>
+      </fieldset>
+    </form>
+
+    <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/publish">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <fieldset>
+        <legend>Ausgabe {{ edition.number }} veröffentlichen</legend>
+        {% if book.links.total > 0 and book.current_edition %}
+        <p>Dieses Buch hat bereits Downloadlinks ({{ book.current_edition.links_count }} davon an Ausgabe {{ book.current_edition.number }}, Formate: {{ formats_text(book.current_edition.files) }}). Der Entwurf enthält: <strong>{{ formats_text(edition.files) }}</strong>. Was soll mit den bestehenden Links geschehen?</p>
+        <label class="check">
+          <input type="radio" name="existing_links" value="keep" required>
+          <span><strong>Bestehende Links bleiben an ihrer bisherigen Ausgabe.</strong><br><span class="muted small">Käufer mit alten Links laden weiter die alte Fassung. Nur neue Links erhalten Ausgabe {{ edition.number }}.</span></span>
+        </label>
+        <label class="check">
+          <input type="radio" name="existing_links" value="migrate" required>
+          <span><strong>Bestehende Links erhalten die neue Ausgabe.</strong><br><span class="muted small">Alle nicht widerrufenen Links liefern ab sofort Ausgabe {{ edition.number }}. Formate, die in der neuen Ausgabe fehlen, stehen dann nicht mehr zur Verfügung.</span></span>
+        </label>
+        {{ field_error(error, "existing_links") }}
+        {% else %}
+        <p class="muted">Es gibt noch keine Downloadlinks für dieses Buch.</p>
+        {% endif %}
+        <button class="btn" type="submit" {% if not edition.files %}disabled aria-describedby="pub-hint-{{ edition.id }}"{% endif %}>Jetzt veröffentlichen</button>
+        {% if not edition.files %}<p class="hint" id="pub-hint-{{ edition.id }}">Lade zuerst mindestens eine Datei hoch.</p>{% endif %}
+      </fieldset>
+    </form>
+
+    <details>
+      <summary>Entwurf verwerfen</summary>
+      <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/delete">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, den Entwurf mit seinen Dateien löschen. Links sind davon nicht betroffen.</span></label>
+        <button class="btn btn-danger btn-small" type="submit">Entwurf löschen</button>
+      </form>
+    </details>
+
+    {% elif not edition.is_current %}
+    <details>
+      <summary>Weitere Aktionen</summary>
+      <div class="stack">
+        {% if edition.links_count == 0 %}
+        <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, Ausgabe {{ edition.number }} mit ihren Dateien endgültig löschen.</span></label>
+          <button class="btn btn-danger btn-small" type="submit">Ausgabe löschen</button>
+        </form>
+        {% else %}
+        <p class="muted small">Diese Ausgabe kann nicht gelöscht werden, solange Links an sie gebunden sind.</p>
+        {% endif %}
+      </div>
+    </details>
+    {% else %}
+    {% set others = book.links.total - edition.links_count %}
+    {% if others > 0 %}
+    <details>
+      <summary>Links früherer Ausgaben auf diese Ausgabe umstellen</summary>
+      <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/migrate-links">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, alle nicht widerrufenen Links dieses Buchs sollen ab sofort Ausgabe {{ edition.number }} liefern.</span></label>
+        <button class="btn btn-secondary btn-small" type="submit">Links umstellen</button>
+      </form>
+    </details>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% if not book.draft_edition %}
+  <div class="edition">
+    <h3>Neue Ausgabe vorbereiten</h3>
+    <form method="post" action="/admin/books/{{ book.id }}/editions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="note">Interne Notiz <span class="muted">(optional)</span></label>
+        <input id="note" name="note" type="text" maxlength="500" placeholder="z. B. Tippfehler in Kapitel 3 korrigiert">
+      </div>
+      {% if book.current_edition and book.current_edition.files %}
+      <fieldset>
+        <legend>Unveränderte Dateien aus Ausgabe {{ book.current_edition.number }} übernehmen</legend>
+        {% for file in book.current_edition.files %}
+        <label class="check"><input type="checkbox" name="copy_formats" value="{{ file.format }}"> <span>{{ file.format | upper }} ({{ file.original_filename }}, {{ file.size_bytes | filesize }})</span></label>
+        {% endfor %}
+        <p class="hint">Übernommene Dateien kannst du im Entwurf jederzeit durch neue ersetzen.</p>
+      </fieldset>
+      {% endif %}
+      <button class="btn btn-secondary" type="submit">Entwurf anlegen</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+<section class="card" aria-labelledby="h-links">
+  <div class="page-head">
+    <h2 id="h-links">Downloadlinks dieses Buchs</h2>
+    <a href="/admin/links?book_id={{ book.id }}">Alle {{ links.total }} anzeigen</a>
+  </div>
+  {% if links["items"] %}
+  <div class="table-wrap">
+    <table class="responsive">
+      <thead><tr><th scope="col">Bezeichnung</th><th scope="col">Ausgabe</th><th scope="col">Zustand</th><th scope="col" class="num">Downloads</th><th scope="col">Erstellt</th></tr></thead>
+      <tbody>
+        {% for link in links["items"] %}
+        <tr>
+          <td class="primary"><a href="/admin/links/{{ link.id }}">{{ link.label or "Ohne Bezeichnung" }}</a></td>
+          <td data-label="Ausgabe">Nr. {{ link.edition_number }}</td>
+          <td data-label="Zustand">{{ state_badge(link.state) }}</td>
+          <td data-label="Downloads" class="num">{{ link.download_count }}{% if link.max_downloads %} / {{ link.max_downloads }}{% endif %}</td>
+          <td data-label="Erstellt">{{ link.created_at | dt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">Noch keine Links.</p>
+  {% endif %}
+</section>
+
+<section class="card" aria-labelledby="h-danger">
+  <h2 id="h-danger">Archivieren oder löschen</h2>
+  <div class="row">
+    <form method="post" action="/admin/books/{{ book.id }}/archive">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if book.status == "active" %}
+      <input type="hidden" name="archived" value="1">
+      <button class="btn btn-secondary" type="submit">Archivieren</button>
+      {% else %}
+      <input type="hidden" name="archived" value="0">
+      <button class="btn btn-secondary" type="submit">Wieder aktivieren</button>
+      {% endif %}
+    </form>
+    <a class="btn btn-danger" href="/admin/books/{{ book.id }}/delete">Löschen …</a>
+  </div>
+  <p class="hint">Archivierte Bücher erscheinen nicht mehr in der Standardliste und erhalten keine neuen Links. Bestehende Links funktionieren weiter. Vor dem Löschen siehst du, welche Links ungültig werden.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block title %}Anmelden{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Anmelden</h1>
+  {% if login_error %}
+  <div class="alert alert-error" role="alert" id="error-box" tabindex="-1">
+    <p>{{ login_error }}</p>
+    <p class="small muted">Zeit: {{ now_text }} · Fehler-ID: <code>{{ request_id }}</code></p>
+  </div>
+  {% endif %}
+  {% if not has_admin %}
+  <div class="alert alert-warn" role="status">
+    <p>Es ist noch kein Administrator eingerichtet. Setze <code>ADMIN_PASSWORD</code> (mindestens 12 Zeichen) und starte die App neu, oder führe im Container <code>ebookctl set-password</code> aus.</p>
+  </div>
+  {% endif %}
+  <form method="post" action="/admin/login" autocomplete="on">
+    <input type="hidden" name="login_token" value="{{ login_token }}">
+    <div class="field">
+      <label for="username">Benutzername</label>
+      <input id="username" name="username" type="text" autocomplete="username" required maxlength="100" value="{{ username }}" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="password">Passwort</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256">
+    </div>
+    <button class="btn btn-block" type="submit">Anmelden</button>
+  </form>
+</div>
+{% endblock %}

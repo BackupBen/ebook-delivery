@@ -1,0 +1,5 @@
+# Einheitliche Zeilenenden, auch wenn das Repository unter Windows bearbeitet wird.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary

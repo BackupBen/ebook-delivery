@@ -1,0 +1,60 @@
+{% set FIELD_LABELS = {
+  "title": "Titel", "description": "Beschreibung", "whop_product_id": "Whop-Produkt-ID",
+  "pdf": "PDF", "epub": "EPUB", "cover": "Cover", "format": "Format",
+  "book_id": "Buch", "edition_id": "Ausgabe", "label": "Bezeichnung", "formats": "Formate",
+  "expires_at": "Ablaufdatum", "max_downloads": "Downloadlimit",
+  "existing_links": "Bestehende Links", "copy_formats": "Dateien übernehmen", "note": "Notiz",
+  "confirm": "Bestätigung", "name": "Name", "scopes": "Berechtigungen",
+  "max_pdf_mb": "Maximale PDF-Größe", "max_epub_mb": "Maximale EPUB-Größe",
+  "max_cover_mb": "Maximale Cover-Größe", "message_template": "Versandnachricht",
+  "current_password": "Aktuelles Passwort", "new_password": "Neues Passwort",
+  "new_password_repeat": "Neues Passwort (Wiederholung)", "code": "Link oder Code"
+} %}
+
+{# Dauerhafte, kopierbare Fehlermeldung. Sie verschwindet nicht von selbst. #}
+{% macro error_box(error, request_id, now_text) %}
+{% if error %}
+<section class="alert alert-error" role="alert" aria-labelledby="error-title" id="error-box" tabindex="-1">
+  <h2 id="error-title">Das hat nicht geklappt</h2>
+  <p>{{ error.message }}</p>
+  {% if error.fields %}
+  <ul>
+    {% for item in error.fields %}
+    <li><strong>{{ FIELD_LABELS.get(item.field, item.field) }}:</strong> {{ item.message }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <details>
+    <summary>Fehlertext zum Kopieren</summary>
+    <pre id="error-text">Fehler: {{ error.message }}
+{% for item in error.fields %}- {{ FIELD_LABELS.get(item.field, item.field) }}: {{ item.message }}
+{% endfor %}Code: {{ error.code }} (HTTP {{ error.status_code }})
+Zeit: {{ now_text }}
+Fehler-ID: {{ request_id }}</pre>
+  </details>
+  <button type="button" class="btn btn-secondary btn-small" data-copy="error-text">Fehlertext kopieren</button>
+</section>
+{% endif %}
+{% endmacro %}
+
+{% macro field_error(error, name) %}
+{% if error and error.by_field.get(name) %}
+<p class="field-error" id="err-{{ name }}">{{ error.by_field.get(name) }}</p>
+{% endif %}
+{% endmacro %}
+
+{% macro invalid(error, name) %}{% if error and error.by_field.get(name) %}aria-invalid="true" aria-describedby="err-{{ name }}"{% endif %}{% endmacro %}
+
+{% macro state_badge(state) %}<span class="badge badge-{{ state }}">{{ STATE_LABELS.get(state, state) }}</span>{% endmacro %}
+
+{% macro pagination(result, page, page_size, base_query) %}
+{% if result.total > page_size %}
+<nav class="pagination" aria-label="Seiten">
+  <span>{% if page > 1 %}<a href="?{{ base_query }}&amp;page={{ page - 1 }}">← Zurück</a>{% endif %}</span>
+  <span class="muted">Seite {{ page }} von {{ ((result.total - 1) // page_size) + 1 }}</span>
+  <span>{% if page * page_size < result.total %}<a href="?{{ base_query }}&amp;page={{ page + 1 }}">Weiter →</a>{% endif %}</span>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro formats_text(files) %}{% for f in files %}{{ f.format | upper }}{% if not loop.last %}, {% endif %}{% else %}–{% endfor %}{% endmacro %}
