@@ -5,7 +5,7 @@
         "properties": {
           "file": {
             "contentMediaType": "application/octet-stream",
-            "description": "JPEG, PNG oder WebP",
+            "description": "JPEG, PNG or WebP",
             "title": "File",
             "type": "string"
           }
@@ -28,7 +28,7 @@
                 "type": "null"
               }
             ],
-            "description": "EPUB-Datei",
+            "description": "EPUB file",
             "title": "Epub"
           },
           "pdf": {
@@ -41,7 +41,7 @@
                 "type": "null"
               }
             ],
-            "description": "PDF-Datei",
+            "description": "PDF file",
             "title": "Pdf"
           }
         },
@@ -53,14 +53,14 @@
         "properties": {
           "description": {
             "default": "",
-            "description": "Optionale Beschreibung",
+            "description": "Optional description",
             "maxLength": 5000,
             "title": "Description",
             "type": "string"
           },
           "language": {
             "default": "de",
-            "description": "Sprache der Käuferseite und der Versandnachricht (de oder en)",
+            "description": "Language of the buyer page and the delivery message (de or en)",
             "enum": [
               "de",
               "en"
@@ -69,7 +69,7 @@
             "type": "string"
           },
           "title": {
-            "description": "Titel des Buchs",
+            "description": "Title of the book",
             "maxLength": 200,
             "minLength": 1,
             "title": "Title",
@@ -85,7 +85,7 @@
                 "type": "null"
               }
             ],
-            "description": "Optionale Whop-Produkt-ID (prod_…). Wird nur gespeichert.",
+            "description": "Optional Whop product ID (prod_…). Matches Whop payments to this book.",
             "examples": [
               "prod_AbC123xyz"
             ],
@@ -371,7 +371,7 @@
             "type": "integer"
           },
           "links": {
-            "description": "Höchstens 500 Einträge; nur mit links:manage",
+            "description": "At most 500 entries; only with links:manage",
             "items": {
               "$ref": "#/components/schemas/LinkOut"
             },
@@ -383,7 +383,7 @@
             "type": "integer"
           },
           "links_total": {
-            "description": "Alle Links des Buchs; diese Zahl bestätigt die Löschung",
+            "description": "All links of the book; this number confirms the deletion",
             "title": "Links Total",
             "type": "integer"
           },
@@ -410,7 +410,7 @@
         "type": "object"
       },
       "DownloadStats": {
-        "description": "Zählwerte ohne Link-Codes und ohne personenbezogene Daten.",
+        "description": "Counts without link codes and without personal data.",
         "properties": {
           "by_book": {
             "items": {
@@ -420,7 +420,7 @@
             "type": "array"
           },
           "by_day": {
-            "description": "Gezählte Downloads pro Tag (UTC)",
+            "description": "Counted downloads per day (UTC)",
             "items": {
               "$ref": "#/components/schemas/DayCount"
             },
@@ -462,7 +462,7 @@
         "additionalProperties": false,
         "properties": {
           "copy_formats": {
-            "description": "Formate, deren Datei aus der aktuellen Ausgabe übernommen wird",
+            "description": "Formats whose file is copied from the current edition",
             "items": {
               "enum": [
                 "pdf",
@@ -475,7 +475,7 @@
           },
           "note": {
             "default": "",
-            "description": "Interne Notiz zur Ausgabe",
+            "description": "Internal note on the edition",
             "maxLength": 500,
             "title": "Note",
             "type": "string"
@@ -526,7 +526,7 @@
             "type": "boolean"
           },
           "links_count": {
-            "description": "Nicht widerrufene Links, die an diese Ausgabe gebunden sind",
+            "description": "Non-revoked links bound to this edition",
             "title": "Links Count",
             "type": "integer"
           },
@@ -589,7 +589,7 @@
                 "type": "null"
               }
             ],
-            "description": "Pflicht, sobald das Buch bereits Käuferlinks hat: „migrate“ stellt alle nicht widerrufenen Links auf die neue Ausgabe um, „keep“ lässt sie an ihrer bisherigen Ausgabe. Es gibt absichtlich keinen Standardwert.",
+            "description": "Required as soon as the book already has download links: “migrate” switches all non-revoked links to the new edition, “keep” leaves them on their previous edition. There is deliberately no default.",
             "title": "Existing Links"
           }
         },
@@ -722,7 +722,7 @@
       "LinkCounts": {
         "properties": {
           "active": {
-            "description": "Links, die derzeit Downloads erlauben",
+            "description": "Links that currently allow downloads",
             "title": "Active",
             "type": "integer"
           },
@@ -757,7 +757,7 @@
                 "type": "null"
               }
             ],
-            "description": "Veröffentlichte Ausgabe; Standard ist die aktuelle Ausgabe des Buchs",
+            "description": "Published edition; defaults to the book's current edition",
             "title": "Edition Id"
           },
           "expires_at": {
@@ -770,11 +770,11 @@
                 "type": "null"
               }
             ],
-            "description": "Ablaufzeitpunkt mit Zeitzone; ohne Angabe dauerhaft gültig",
+            "description": "Expiry time with time zone; without it the link never expires",
             "title": "Expires At"
           },
           "formats": {
-            "description": "Freigegebene Formate",
+            "description": "Allowed formats",
             "items": {
               "enum": [
                 "pdf",
@@ -788,7 +788,7 @@
           },
           "label": {
             "default": "",
-            "description": "Interne Bezeichnung zur Zuordnung. Bitte keine personenbezogenen Daten.",
+            "description": "Internal label for reference. Please no personal data.",
             "maxLength": 200,
             "title": "Label",
             "type": "string"
@@ -804,7 +804,7 @@
                 "type": "null"
               }
             ],
-            "description": "Downloadlimit; ohne Angabe unbegrenzt",
+            "description": "Download limit; without it unlimited",
             "title": "Max Downloads"
           }
         },
@@ -825,7 +825,7 @@
             "type": "string"
           },
           "code": {
-            "description": "Geheimer Code. Wird nur in dieser Antwort ausgegeben.",
+            "description": "Secret code. Returned only in this response.",
             "title": "Code",
             "type": "string"
           },
@@ -909,7 +909,7 @@
             "title": "Revoked At"
           },
           "state": {
-            "description": "Tatsächlicher Zustand inklusive Ablauf und Limit",
+            "description": "Actual state including expiry and limit",
             "enum": [
               "active",
               "disabled",
@@ -934,7 +934,7 @@
             "type": "string"
           },
           "url": {
-            "description": "Vollständiger Käuferlink. Wird nur in dieser Antwort ausgegeben.",
+            "description": "Full download link. Returned only in this response.",
             "title": "Url",
             "type": "string"
           }
@@ -997,7 +997,7 @@
         "additionalProperties": false,
         "properties": {
           "code": {
-            "description": "Link-Code oder vollständiger Käuferlink",
+            "description": "Link code or full download link",
             "maxLength": 2048,
             "minLength": 1,
             "title": "Code",
@@ -1015,7 +1015,7 @@
         "properties": {
           "confirm": {
             "const": true,
-            "description": "Muss true sein: bestätigt die Umstellung aller nicht widerrufenen Links",
+            "description": "Must be true: confirms switching all non-revoked links",
             "title": "Confirm",
             "type": "boolean"
           }
@@ -1027,7 +1027,7 @@
         "type": "object"
       },
       "LinkOut": {
-        "description": "Ein Käuferlink ohne den geheimen Code.",
+        "description": "A download link without the secret code.",
         "properties": {
           "book_id": {
             "title": "Book Id",
@@ -1117,7 +1117,7 @@
             "title": "Revoked At"
           },
           "state": {
-            "description": "Tatsächlicher Zustand inklusive Ablauf und Limit",
+            "description": "Actual state including expiry and limit",
             "enum": [
               "active",
               "disabled",
@@ -1176,7 +1176,7 @@
                 "type": "null"
               }
             ],
-            "description": "Link ausdrücklich an eine andere Ausgabe binden",
+            "description": "Explicitly bind the link to another edition",
             "title": "Edition Id"
           },
           "expires_at": {
@@ -1189,7 +1189,7 @@
                 "type": "null"
               }
             ],
-            "description": "null entfernt das Ablaufdatum",
+            "description": "null removes the expiry date",
             "title": "Expires At"
           },
           "formats": {
@@ -1234,7 +1234,7 @@
                 "type": "null"
               }
             ],
-            "description": "null entfernt das Limit",
+            "description": "null removes the limit",
             "title": "Max Downloads"
           },
           "status": {
@@ -1250,7 +1250,7 @@
                 "type": "null"
               }
             ],
-            "description": "Aktivieren oder vorübergehend deaktivieren",
+            "description": "Enable or temporarily disable",
             "title": "Status"
           }
         },
@@ -1289,7 +1289,7 @@
             "type": "integer"
           },
           "links_without_matching_format": {
-            "description": "Links, die trotz „migrate“ an ihrer Ausgabe bleiben, weil die neue Ausgabe keines ihrer freigegebenen Formate enthält",
+            "description": "Links that stay on their edition despite “migrate” because the new edition contains none of their allowed formats",
             "title": "Links Without Matching Format",
             "type": "integer"
           }
@@ -1307,26 +1307,26 @@
     "securitySchemes": {
       "HTTPBearer": {
         "bearerFormat": "ebk_…",
-        "description": "API-Schlüssel aus dem Verwaltungsbereich",
+        "description": "API key from the admin area",
         "scheme": "bearer",
         "type": "http"
       }
     }
   },
   "info": {
-    "description": "\nREST-API zur Verwaltung von Büchern, Ausgaben und Käuferlinks.\n\n## Anmeldung\n\nJede Anfrage benötigt einen API-Schlüssel im Header `Authorization: Bearer <API_KEY>`.\nSchlüssel werden im Verwaltungsbereich unter **Einstellungen → API-Schlüssel** erstellt und\ndort nur einmal vollständig angezeigt. Schlüssel in der URL werden abgewiesen.\n\n| Berechtigung | Erlaubt |\n|---|---|\n| `books:read` | Bücher, Ausgaben und Statistik lesen |\n| `books:write` | Bücher anlegen, bearbeiten, archivieren, löschen; Ausgaben veröffentlichen |\n| `files:write` | PDF, EPUB und Cover hochladen oder entfernen |\n| `links:manage` | Käuferlinks erstellen, auflisten, prüfen, ändern, widerrufen |\n\n## Idempotenz\n\n`POST /books`, die Upload-Endpunkte und `POST /links` akzeptieren den Header\n`Idempotency-Key` (16 bis 200 Zeichen, am besten eine zufällige UUID). Eine Wiederholung\nmit demselben Schlüssel und demselben Inhalt liefert innerhalb von 24 Stunden die\nursprüngliche Antwort mit dem Header `Idempotent-Replayed: true` und erzeugt kein Duplikat.\nDerselbe Schlüssel mit anderem Inhalt wird mit 422 abgewiesen.\n\n## Käuferlinks\n\nDer geheime Code und die vollständige URL eines Links stehen **nur** in der Antwort auf\n`POST /links`. Gespeichert wird ausschließlich ein Hash; Listen und Detailabfragen enthalten\nden Code nie.\n\n## Ausgaben\n\nEin neues Buch erhält automatisch einen Entwurf für Ausgabe 1. Dateien werden in einen\nEntwurf hochgeladen; veröffentlichte Ausgaben sind unveränderlich. Beim Veröffentlichen\neiner weiteren Ausgabe muss `existing_links` ausdrücklich `migrate` oder `keep` sein, sobald\ndas Buch Käuferlinks hat.\n\n## Fehler\n\nFehler haben immer die Form `{\"error\": {\"code\": \"...\", \"message\": \"...\", \"fields\": [...]}}`.\n",
-    "title": "E-Book-Auslieferung API",
+    "description": "\nREST API for managing books, editions and download links.\n\n## Authentication\n\nEvery request needs an API key in the header `Authorization: Bearer <API_KEY>`.\nKeys are created in the admin area under **Settings → API keys** and are shown in full\nonly once. Keys in the URL are rejected.\n\n| Permission | Allows |\n|---|---|\n| `books:read` | Read books, editions and statistics |\n| `books:write` | Create, edit, archive and delete books; publish editions |\n| `files:write` | Upload or remove PDF, EPUB and cover |\n| `links:manage` | Create, list, check, change and revoke download links |\n\n## Idempotency\n\n`POST /books`, the upload endpoints and `POST /links` accept the header\n`Idempotency-Key` (16 to 200 characters, ideally a random UUID). Repeating a request with the\nsame key and the same content within 24 hours returns the original response with the header\n`Idempotent-Replayed: true` and creates no duplicate.\nThe same key with different content is rejected with 422.\n\n## Download links\n\nThe secret code and the full URL of a link are returned **only** in the response to\n`POST /links`. Only a hash is stored; lists and detail requests never contain\nthe code.\n\n## Editions\n\nA new book automatically gets a draft for edition 1. Files are uploaded into a\ndraft; published editions are immutable. When publishing a further edition,\n`existing_links` must be explicitly `migrate` or `keep` as soon as the book has\ndownload links.\n\n## Errors\n\nErrors always have the form `{\"error\": {\"code\": \"...\", \"message\": \"...\", \"fields\": [...]}}`.\n",
+    "title": "E-book delivery API",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
     "/books": {
       "get": {
-        "description": "Berechtigung: `books:read`",
+        "description": "Permission: `books:read`",
         "operationId": "list_books_books_get",
         "parameters": [
           {
-            "description": "Suche in Titel, Beschreibung, Whop-ID",
+            "description": "Search in title, description, Whop ID",
             "in": "query",
             "name": "q",
             "required": false,
@@ -1340,7 +1340,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Suche in Titel, Beschreibung, Whop-ID",
+              "description": "Search in title, description, Whop ID",
               "title": "Q"
             }
           },
@@ -1403,7 +1403,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -1413,7 +1413,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -1423,7 +1423,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -1433,7 +1433,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -1443,7 +1443,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -1453,7 +1453,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -1461,17 +1461,17 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Bücher auflisten",
+        "summary": "List books",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       },
       "post": {
-        "description": "Legt ein Buch mit einem Entwurf für Ausgabe 1 an. Berechtigung: `books:write`",
+        "description": "Creates a book with a draft for edition 1. Permission: `books:write`",
         "operationId": "create_book_books_post",
         "parameters": [
           {
-            "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+            "description": "Optional. Repeated requests with the same key create no duplicate.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": false,
@@ -1484,7 +1484,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+              "description": "Optional. Repeated requests with the same key create no duplicate.",
               "title": "Idempotency-Key"
             }
           }
@@ -1518,7 +1518,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -1528,7 +1528,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -1538,7 +1538,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -1548,7 +1548,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -1558,7 +1558,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -1568,7 +1568,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -1576,15 +1576,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Buch anlegen",
+        "summary": "Create book",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       }
     },
     "/books/{book_id}": {
       "delete": {
-        "description": "Löscht Buch, Ausgaben, Dateien und alle Links endgültig. Berechtigung: `books:write`",
+        "description": "Permanently deletes the book, its editions, files and all links. Permission: `books:write`",
         "operationId": "delete_book_books__book_id__delete",
         "parameters": [
           {
@@ -1597,12 +1597,12 @@
             }
           },
           {
-            "description": "Bestätigung: Anzahl der Links, die ungültig werden (`links_total` aus `deletion-preview`). Stimmt die Zahl nicht, wird nichts gelöscht.",
+            "description": "Confirmation: number of links that will become invalid (`links_total` from `deletion-preview`). If the number does not match, nothing is deleted.",
             "in": "query",
             "name": "expected_link_count",
             "required": true,
             "schema": {
-              "description": "Bestätigung: Anzahl der Links, die ungültig werden (`links_total` aus `deletion-preview`). Stimmt die Zahl nicht, wird nichts gelöscht.",
+              "description": "Confirmation: number of links that will become invalid (`links_total` from `deletion-preview`). If the number does not match, nothing is deleted.",
               "minimum": 0,
               "title": "Expected Link Count",
               "type": "integer"
@@ -1628,7 +1628,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -1638,7 +1638,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -1648,7 +1648,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -1658,7 +1658,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -1668,7 +1668,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -1678,7 +1678,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -1686,13 +1686,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Buch löschen",
+        "summary": "Delete book",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       },
       "get": {
-        "description": "Berechtigung: `books:read`",
+        "description": "Permission: `books:read`",
         "operationId": "get_book_books__book_id__get",
         "parameters": [
           {
@@ -1724,7 +1724,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -1734,7 +1734,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -1744,7 +1744,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -1754,7 +1754,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -1764,7 +1764,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -1774,7 +1774,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -1782,13 +1782,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Buch abrufen",
+        "summary": "Get book",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       },
       "patch": {
-        "description": "Ändert nur die übergebenen Felder. Berechtigung: `books:write`",
+        "description": "Changes only the fields provided. Permission: `books:write`",
         "operationId": "update_book_books__book_id__patch",
         "parameters": [
           {
@@ -1830,7 +1830,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -1840,7 +1840,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -1850,7 +1850,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -1860,7 +1860,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -1870,7 +1870,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -1880,7 +1880,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -1888,15 +1888,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Buch bearbeiten",
+        "summary": "Edit book",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       }
     },
     "/books/{book_id}/archive": {
       "post": {
-        "description": "Archivierte Bücher erhalten keine neuen Links; bestehende Links funktionieren weiter.\n\nBerechtigung: `books:write`",
+        "description": "Archived books get no new links; existing links keep working.\n\nPermission: `books:write`",
         "operationId": "archive_book_books__book_id__archive_post",
         "parameters": [
           {
@@ -1928,7 +1928,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -1938,7 +1938,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -1948,7 +1948,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -1958,7 +1958,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -1968,7 +1968,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -1978,7 +1978,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -1986,15 +1986,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Buch archivieren",
+        "summary": "Archive book",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       }
     },
     "/books/{book_id}/cover": {
       "delete": {
-        "description": "Berechtigung: `files:write`",
+        "description": "Permission: `files:write`",
         "operationId": "delete_cover_books__book_id__cover_delete",
         "parameters": [
           {
@@ -2026,7 +2026,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2036,7 +2036,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2046,7 +2046,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2056,7 +2056,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2066,7 +2066,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2076,7 +2076,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2084,13 +2084,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Cover entfernen",
+        "summary": "Remove cover",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       },
       "put": {
-        "description": "Das Bild wird geprüft, verkleinert und neu kodiert. Berechtigung: `files:write`",
+        "description": "The image is checked, resized and re-encoded. Permission: `files:write`",
         "operationId": "upload_cover_books__book_id__cover_put",
         "parameters": [
           {
@@ -2132,7 +2132,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2142,7 +2142,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2152,7 +2152,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2162,7 +2162,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2172,7 +2172,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2182,7 +2182,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2190,15 +2190,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Cover hochladen",
+        "summary": "Upload cover",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       }
     },
     "/books/{book_id}/deletion-preview": {
       "get": {
-        "description": "Zeigt, wie viele Links durch die Löschung ungültig würden. Berechtigung:\n`books:write`. Die einzelnen Links (`links`) sind nur enthalten, wenn der Schlüssel\nzusätzlich `links:manage` besitzt; die Zählwerte sind immer enthalten.",
+        "description": "Shows how many links a deletion would invalidate. Permission:\n`books:write`. The individual links (`links`) are only included if the key\nalso has `links:manage`; the counts are always included.",
         "operationId": "deletion_preview_books__book_id__deletion_preview_get",
         "parameters": [
           {
@@ -2230,7 +2230,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2240,7 +2240,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2250,7 +2250,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2260,7 +2260,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2270,7 +2270,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2280,7 +2280,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2288,15 +2288,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Folgen einer Löschung anzeigen",
+        "summary": "Preview the effects of a deletion",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       }
     },
     "/books/{book_id}/editions": {
       "get": {
-        "description": "Berechtigung: `books:read`",
+        "description": "Permission: `books:read`",
         "operationId": "list_editions_books__book_id__editions_get",
         "parameters": [
           {
@@ -2328,7 +2328,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2338,7 +2338,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2348,7 +2348,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2358,7 +2358,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2368,7 +2368,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2378,7 +2378,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2386,13 +2386,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Ausgaben auflisten",
+        "summary": "List editions",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       },
       "post": {
-        "description": "Pro Buch gibt es höchstens einen Entwurf. Berechtigung: `books:write`",
+        "description": "Each book has at most one draft. Permission: `books:write`",
         "operationId": "create_edition_books__book_id__editions_post",
         "parameters": [
           {
@@ -2405,7 +2405,7 @@
             }
           },
           {
-            "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+            "description": "Optional. Repeated requests with the same key create no duplicate.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": false,
@@ -2418,7 +2418,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+              "description": "Optional. Repeated requests with the same key create no duplicate.",
               "title": "Idempotency-Key"
             }
           }
@@ -2452,7 +2452,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2462,7 +2462,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2472,7 +2472,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2482,7 +2482,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2492,7 +2492,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2502,7 +2502,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2510,15 +2510,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Neue Ausgabe als Entwurf anlegen",
+        "summary": "Create a new edition as a draft",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       }
     },
     "/books/{book_id}/editions/{edition_id}": {
       "delete": {
-        "description": "Nur Entwürfe und ältere Ausgaben ohne gebundene Links. Berechtigung: `books:write`",
+        "description": "Only drafts and older editions without bound links. Permission: `books:write`",
         "operationId": "delete_edition_books__book_id__editions__edition_id__delete",
         "parameters": [
           {
@@ -2552,7 +2552,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2562,7 +2562,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2572,7 +2572,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2582,7 +2582,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2592,7 +2592,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2602,7 +2602,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2610,13 +2610,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Ausgabe löschen",
+        "summary": "Delete edition",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       },
       "get": {
-        "description": "Berechtigung: `books:read`",
+        "description": "Permission: `books:read`",
         "operationId": "get_edition_books__book_id__editions__edition_id__get",
         "parameters": [
           {
@@ -2657,7 +2657,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2667,7 +2667,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2677,7 +2677,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2687,7 +2687,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2697,7 +2697,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2707,7 +2707,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2715,15 +2715,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Ausgabe abrufen",
+        "summary": "Get edition",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       }
     },
     "/books/{book_id}/editions/{edition_id}/files": {
       "post": {
-        "description": "Lädt Dateien als `multipart/form-data` in einen Entwurf. Vorhandene Dateien\ndesselben Formats werden ersetzt. Geprüft werden Dateiendung, angegebener MIME-Typ,\ntatsächlicher Inhalt und Größe. Berechtigung: `files:write`",
+        "description": "Uploads files as `multipart/form-data` into a draft. Existing files\nof the same format are replaced. File extension, declared MIME type,\nactual content and size are checked. Permission: `files:write`",
         "operationId": "upload_files_books__book_id__editions__edition_id__files_post",
         "parameters": [
           {
@@ -2745,7 +2745,7 @@
             }
           },
           {
-            "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+            "description": "Optional. Repeated requests with the same key create no duplicate.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": false,
@@ -2758,7 +2758,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+              "description": "Optional. Repeated requests with the same key create no duplicate.",
               "title": "Idempotency-Key"
             }
           }
@@ -2791,7 +2791,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2801,7 +2801,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2811,7 +2811,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2821,7 +2821,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2831,7 +2831,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2841,7 +2841,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2849,15 +2849,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "PDF und/oder EPUB hochladen",
+        "summary": "Upload PDF and/or EPUB",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       }
     },
     "/books/{book_id}/editions/{edition_id}/files/{fmt}": {
       "delete": {
-        "description": "Berechtigung: `files:write`",
+        "description": "Permission: `files:write`",
         "operationId": "delete_file_books__book_id__editions__edition_id__files__fmt__delete",
         "parameters": [
           {
@@ -2911,7 +2911,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -2921,7 +2921,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -2931,7 +2931,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -2941,7 +2941,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -2951,7 +2951,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -2961,7 +2961,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -2969,15 +2969,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Datei aus einem Entwurf entfernen",
+        "summary": "Remove a file from a draft",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       }
     },
     "/books/{book_id}/editions/{edition_id}/migrate-links": {
       "post": {
-        "description": "Stellt alle nicht widerrufenen Links des Buchs ausdrücklich auf diese\nveröffentlichte Ausgabe um. Berechtigung: `links:manage`",
+        "description": "Explicitly switches all non-revoked links of the book to this\npublished edition. Permission: `links:manage`",
         "operationId": "migrate_links_books__book_id__editions__edition_id__migrate_links_post",
         "parameters": [
           {
@@ -3028,7 +3028,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3038,7 +3038,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3048,7 +3048,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3058,7 +3058,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3068,7 +3068,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3078,7 +3078,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3086,15 +3086,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Bestehende Links auf diese Ausgabe umstellen",
+        "summary": "Switch existing links to this edition",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       }
     },
     "/books/{book_id}/editions/{edition_id}/publish": {
       "post": {
-        "description": "Macht den Entwurf zur aktuellen Ausgabe. Hat das Buch bereits Käuferlinks, muss\n`existing_links` ausdrücklich `migrate` oder `keep` sein; sonst antwortet die API\nmit 422 (`existing_links_required`). Links, deren freigegebene Formate in der neuen\nAusgabe fehlen, werden nicht umgestellt und in `links_without_matching_format`\ngezählt. Berechtigung: `books:write`, für `migrate` zusätzlich `links:manage`",
+        "description": "Makes the draft the current edition. If the book already has download links,\n`existing_links` must be explicitly `migrate` or `keep`; otherwise the API responds\nwith 422 (`existing_links_required`). Links whose allowed formats are missing from the new\nedition are not switched and are counted in `links_without_matching_format`.\nPermission: `books:write`, for `migrate` additionally `links:manage`",
         "operationId": "publish_edition_books__book_id__editions__edition_id__publish_post",
         "parameters": [
           {
@@ -3152,7 +3152,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3162,7 +3162,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3172,7 +3172,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3182,7 +3182,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3192,7 +3192,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3202,7 +3202,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3210,15 +3210,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Ausgabe veröffentlichen",
+        "summary": "Publish edition",
         "tags": [
-          "Ausgaben"
+          "Editions"
         ]
       }
     },
     "/books/{book_id}/unarchive": {
       "post": {
-        "description": "Berechtigung: `books:write`",
+        "description": "Permission: `books:write`",
         "operationId": "unarchive_book_books__book_id__unarchive_post",
         "parameters": [
           {
@@ -3250,7 +3250,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3260,7 +3260,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3270,7 +3270,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3280,7 +3280,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3290,7 +3290,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3300,7 +3300,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3308,15 +3308,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Archivierung aufheben",
+        "summary": "Unarchive book",
         "tags": [
-          "Bücher"
+          "Books"
         ]
       }
     },
     "/links": {
       "get": {
-        "description": "Die Liste enthält keine Codes. Berechtigung: `links:manage`",
+        "description": "The list contains no codes. Permission: `links:manage`",
         "operationId": "list_links_links_get",
         "parameters": [
           {
@@ -3360,7 +3360,7 @@
             }
           },
           {
-            "description": "Suche in Bezeichnung und Buchtitel",
+            "description": "Search in label and book title",
             "in": "query",
             "name": "q",
             "required": false,
@@ -3374,7 +3374,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Suche in Bezeichnung und Buchtitel",
+              "description": "Search in label and book title",
               "title": "Q"
             }
           },
@@ -3422,7 +3422,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3432,7 +3432,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3442,7 +3442,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3452,7 +3452,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3462,7 +3462,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3472,7 +3472,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3480,17 +3480,17 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Links auflisten",
+        "summary": "List links",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       },
       "post": {
-        "description": "Erstellt einen Link für genau ein Buch. Ohne `expires_at` und `max_downloads` ist\ner dauerhaft und unbegrenzt gültig. `code` und `url` stehen nur in dieser Antwort.\nBerechtigung: `links:manage`",
+        "description": "Creates a link for exactly one book. Without `expires_at` and `max_downloads` it\nnever expires and has no download limit. `code` and `url` appear only in this response.\nPermission: `links:manage`",
         "operationId": "create_link_links_post",
         "parameters": [
           {
-            "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+            "description": "Optional. Repeated requests with the same key create no duplicate.",
             "in": "header",
             "name": "Idempotency-Key",
             "required": false,
@@ -3503,7 +3503,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Optional. Wiederholungen mit demselben Schlüssel erzeugen kein Duplikat.",
+              "description": "Optional. Repeated requests with the same key create no duplicate.",
               "title": "Idempotency-Key"
             }
           }
@@ -3537,7 +3537,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3547,7 +3547,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3557,7 +3557,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3567,7 +3567,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3577,7 +3577,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3587,7 +3587,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3595,15 +3595,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Link erstellen",
+        "summary": "Create link",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       }
     },
     "/links/lookup": {
       "post": {
-        "description": "Findet den Link zu einem Code oder einer vollständigen URL und liefert seinen\nZustand. Der Code steht im Anfragekörper, nie in der URL. Berechtigung: `links:manage`",
+        "description": "Finds the link for a code or a full URL and returns its\nstate. The code goes in the request body, never in the URL. Permission: `links:manage`",
         "operationId": "lookup_link_links_lookup_post",
         "requestBody": {
           "content": {
@@ -3634,7 +3634,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3644,7 +3644,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3654,7 +3654,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3664,7 +3664,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3674,7 +3674,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3684,7 +3684,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3692,15 +3692,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Link anhand seines Codes prüfen",
+        "summary": "Check a link by its code",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       }
     },
     "/links/{link_id}": {
       "delete": {
-        "description": "Nur widerrufene Links können gelöscht werden. Berechtigung: `links:manage`",
+        "description": "Only revoked links can be deleted. Permission: `links:manage`",
         "operationId": "delete_link_links__link_id__delete",
         "parameters": [
           {
@@ -3725,7 +3725,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3735,7 +3735,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3745,7 +3745,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3755,7 +3755,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3765,7 +3765,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3775,7 +3775,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3783,13 +3783,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Widerrufenen Link löschen",
+        "summary": "Delete revoked link",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       },
       "get": {
-        "description": "`state` berücksichtigt Ablaufdatum und Downloadlimit. Berechtigung: `links:manage`",
+        "description": "`state` takes the expiry date and download limit into account. Permission: `links:manage`",
         "operationId": "get_link_links__link_id__get",
         "parameters": [
           {
@@ -3821,7 +3821,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3831,7 +3831,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3841,7 +3841,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3851,7 +3851,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3861,7 +3861,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3871,7 +3871,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3879,13 +3879,13 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Link abrufen und Zustand prüfen",
+        "summary": "Get link and check its state",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       },
       "patch": {
-        "description": "Ändert nur die übergebenen Felder. `status: disabled` deaktiviert vorübergehend,\n`status: active` aktiviert wieder. Berechtigung: `links:manage`",
+        "description": "Changes only the fields provided. `status: disabled` disables temporarily,\n`status: active` enables again. Permission: `links:manage`",
         "operationId": "update_link_links__link_id__patch",
         "parameters": [
           {
@@ -3927,7 +3927,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -3937,7 +3937,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -3947,7 +3947,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -3957,7 +3957,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -3967,7 +3967,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -3977,7 +3977,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -3985,15 +3985,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Link ändern",
+        "summary": "Change link",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       }
     },
     "/links/{link_id}/revoke": {
       "post": {
-        "description": "Endgültig; ein erneuter Aufruf ändert nichts. Berechtigung: `links:manage`",
+        "description": "Permanent; calling it again changes nothing. Permission: `links:manage`",
         "operationId": "revoke_link_links__link_id__revoke_post",
         "parameters": [
           {
@@ -4025,7 +4025,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -4035,7 +4035,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -4045,7 +4045,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -4055,7 +4055,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -4065,7 +4065,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -4075,7 +4075,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -4083,15 +4083,15 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Link widerrufen",
+        "summary": "Revoke link",
         "tags": [
-          "Käuferlinks"
+          "Download links"
         ]
       }
     },
     "/links/{link_id}/stats": {
       "get": {
-        "description": "Berechtigung: `links:manage`",
+        "description": "Permission: `links:manage`",
         "operationId": "link_stats_links__link_id__stats_get",
         "parameters": [
           {
@@ -4157,7 +4157,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -4167,7 +4167,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -4177,7 +4177,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -4187,7 +4187,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -4197,7 +4197,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -4207,7 +4207,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -4215,19 +4215,19 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Downloadstatistik eines Links",
+        "summary": "Download statistics of a link",
         "tags": [
-          "Statistik"
+          "Statistics"
         ]
       }
     },
     "/stats/downloads": {
       "get": {
-        "description": "Gezählte Downloads nach Tag, Format und Buch. Berechtigung: `books:read`",
+        "description": "Counted downloads by day, format and book. Permission: `books:read`",
         "operationId": "stats_stats_downloads_get",
         "parameters": [
           {
-            "description": "Standard: 30 Tage vor date_to",
+            "description": "Default: 30 days before date_to",
             "in": "query",
             "name": "date_from",
             "required": false,
@@ -4241,12 +4241,12 @@
                   "type": "null"
                 }
               ],
-              "description": "Standard: 30 Tage vor date_to",
+              "description": "Default: 30 days before date_to",
               "title": "Date From"
             }
           },
           {
-            "description": "Standard: heute (UTC)",
+            "description": "Default: today (UTC)",
             "in": "query",
             "name": "date_to",
             "required": false,
@@ -4260,7 +4260,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Standard: heute (UTC)",
+              "description": "Default: today (UTC)",
               "title": "Date To"
             }
           },
@@ -4301,7 +4301,7 @@
                 }
               }
             },
-            "description": "API-Schlüssel fehlt oder ist ungültig"
+            "description": "API key missing or invalid"
           },
           "403": {
             "content": {
@@ -4311,7 +4311,7 @@
                 }
               }
             },
-            "description": "Berechtigung fehlt"
+            "description": "Missing permission"
           },
           "404": {
             "content": {
@@ -4321,7 +4321,7 @@
                 }
               }
             },
-            "description": "Nicht gefunden"
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -4331,7 +4331,7 @@
                 }
               }
             },
-            "description": "Konflikt mit dem aktuellen Zustand"
+            "description": "Conflict with the current state"
           },
           "422": {
             "content": {
@@ -4341,7 +4341,7 @@
                 }
               }
             },
-            "description": "Ungültige Eingabe"
+            "description": "Invalid input"
           },
           "429": {
             "content": {
@@ -4351,7 +4351,7 @@
                 }
               }
             },
-            "description": "Zu viele Anfragen"
+            "description": "Too many requests"
           }
         },
         "security": [
@@ -4359,35 +4359,35 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Downloadstatistik",
+        "summary": "Download statistics",
         "tags": [
-          "Statistik"
+          "Statistics"
         ]
       }
     }
   },
   "servers": [
     {
-      "description": "Diese Installation",
+      "description": "This installation",
       "url": "/api/v1"
     }
   ],
   "tags": [
     {
-      "description": "Bücher und ihre Metadaten",
-      "name": "Bücher"
+      "description": "Books and their metadata",
+      "name": "Books"
     },
     {
-      "description": "Ausgaben eines Buchs und deren Dateien",
-      "name": "Ausgaben"
+      "description": "Editions of a book and their files",
+      "name": "Editions"
     },
     {
-      "description": "Persönliche Downloadlinks",
-      "name": "Käuferlinks"
+      "description": "Personal download links",
+      "name": "Download links"
     },
     {
-      "description": "Zählwerte ohne Codes und ohne Client-Daten",
-      "name": "Statistik"
+      "description": "Counts without codes and without client data",
+      "name": "Statistics"
     }
   ]
 }

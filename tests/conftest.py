@@ -14,7 +14,7 @@ import pytest
 from PIL import Image
 from starlette.testclient import TestClient
 
-from ebookapp import security
+from ebookapp import i18n, security
 from ebookapp.config import Settings, load_settings
 from ebookapp.db import open_db
 from ebookapp.schemas import ApiKeyCreate
@@ -137,9 +137,14 @@ class Env:
     tmp: Path
     extra: dict[str, Any] = field(default_factory=dict)
 
-    def new_client(self, **kwargs: Any) -> TestClient:
+    def new_client(self, *, language: str | None = "de", **kwargs: Any) -> TestClient:
+        """Neuer Client. Die bestehenden Tests prüfen deutsche Texte der Verwaltung; ohne
+        Sprach-Cookie (``language=None``) gilt die Standardsprache Englisch."""
         kwargs.setdefault("client", PROXY)
-        return TestClient(self.app, base_url=BASE_URL, follow_redirects=False, **kwargs)
+        client = TestClient(self.app, base_url=BASE_URL, follow_redirects=False, **kwargs)
+        if language:
+            client.cookies.set(i18n.COOKIE_NAME, language)
+        return client
 
     def login(self, client: TestClient | None = None, password: str = ADMIN_PASSWORD) -> Admin:
         client = client or self.client
@@ -182,9 +187,17 @@ def make_env(tmp_path: Path) -> Iterator[Callable[..., Env]]:
         settings = load_settings(values)
         app = create_app(settings)
         client = TestClient(app, base_url=BASE_URL, follow_redirects=False, client=PROXY)
+        client.cookies.set(i18n.COOKIE_NAME, "de")
         return Env(app=app, settings=settings, client=client, tmp=tmp_path)
 
     yield factory
+
+
+@pytest.fixture(autouse=True)
+def german_ui() -> Iterator[None]:
+    """Direkte Aufrufe von Diensten im Test laufen wie die Clients auf Deutsch."""
+    with i18n.language("de"):
+        yield
 
 
 @pytest.fixture

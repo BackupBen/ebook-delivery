@@ -33,6 +33,7 @@ from typing import Any
 from .config import Settings
 from .db import connect, now_iso, now_utc, parse_iso
 from .errors import AppError, Conflict
+from .i18n import _
 from .storage import Storage
 
 log = logging.getLogger("ebookapp.backup")
@@ -143,7 +144,7 @@ class BackupManager:
 
     def _restic(self, target: str, *args: str, check: bool = True) -> subprocess.CompletedProcess:
         if not self.restic:
-            raise BackupError("restic ist nicht installiert.", code="backup_unavailable")
+            raise BackupError(_("restic ist nicht installiert."), code="backup_unavailable")
         result = subprocess.run(  # noqa: S603 - feste Programmdatei, keine Shell
             [self.restic, *args],
             env=self._env(target),
@@ -155,7 +156,11 @@ class BackupManager:
         )
         if check and result.returncode != 0:
             raise BackupError(
-                f"restic {args[0]} ist fehlgeschlagen: {_sanitize(result.stderr or result.stdout)}"
+                _(
+                    "restic %(command)s ist fehlgeschlagen: %(output)s",
+                    command=args[0],
+                    output=_sanitize(result.stderr or result.stdout),
+                )
             )
         return result
 
@@ -169,19 +174,19 @@ class BackupManager:
 
     def _require_enabled(self) -> None:
         if not self.restic:
-            raise BackupError("restic ist nicht installiert.", code="backup_unavailable")
+            raise BackupError(_("restic ist nicht installiert."), code="backup_unavailable")
         if not self.settings.backup_password:
             raise BackupError(
-                "Backups sind nicht eingerichtet: BACKUP_PASSWORD fehlt.",
+                _("Backups sind nicht eingerichtet: BACKUP_PASSWORD fehlt."),
                 code="backup_unconfigured",
             )
 
     def _target_check(self, target: str) -> None:
         if target not in ("local", "offsite"):
-            raise BackupError("Unbekanntes Backup-Ziel.", code="backup_target")
+            raise BackupError(_("Unbekanntes Backup-Ziel."), code="backup_target")
         if target == "offsite" and not self.offsite_configured:
             raise BackupError(
-                "Es ist kein externes Backup-Ziel eingerichtet.", code="backup_unconfigured"
+                _("Es ist kein externes Backup-Ziel eingerichtet."), code="backup_unconfigured"
             )
 
     # ------------------------------------------------------------------
@@ -208,7 +213,7 @@ class BackupManager:
             target.execute("PRAGMA journal_mode = DELETE")
             target.execute("VACUUM")
             if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                raise BackupError("Die Datenbankkopie ist nicht konsistent.")
+                raise BackupError(_("Die Datenbankkopie ist nicht konsistent."))
             target.commit()
         finally:
             target.close()
@@ -220,7 +225,7 @@ class BackupManager:
         """Führt ein Backup aus (lokal und, falls eingerichtet, extern)."""
         self._require_enabled()
         if not self._lock.acquire(blocking=False):
-            raise Conflict("Es läuft bereits ein Backup.", code="backup_running")
+            raise Conflict(_("Es läuft bereits ein Backup."), code="backup_running")
         results = []
         self.settings.data_dir.mkdir(parents=True, exist_ok=True)
         # Dateisperre: schließt auch ein gleichzeitiges Backup aus einem zweiten Prozess
@@ -230,7 +235,7 @@ class BackupManager:
             try:
                 fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError as exc:
-                raise Conflict("Es läuft bereits ein Backup.", code="backup_running") from exc
+                raise Conflict(_("Es läuft bereits ein Backup."), code="backup_running") from exc
             self.storage.backup_running.set()
             try:
                 self._snapshot_database()
@@ -277,10 +282,11 @@ class BackupManager:
                 )
                 summary = self._summary(result.stdout)
                 snapshot = summary.get("snapshot_id")
-                detail = (
-                    f"{summary.get('total_files_processed', 0)} Dateien, "
-                    f"{summary.get('total_bytes_processed', 0)} Bytes geprüft, "
-                    f"{summary.get('data_added', 0)} Bytes neu"
+                detail = _(
+                    "%(files)s Dateien, %(bytes)s Bytes geprüft, %(added)s Bytes neu",
+                    files=summary.get("total_files_processed", 0),
+                    bytes=summary.get("total_bytes_processed", 0),
+                    added=summary.get("data_added", 0),
                 )
                 forget = [
                     "forget",
@@ -360,7 +366,7 @@ class BackupManager:
         self._require_enabled()
         self._target_check(target)
         if not re.fullmatch(r"latest|[0-9a-f]{8,64}", snapshot):
-            raise BackupError("Ungültige Snapshot-Kennung.", code="backup_snapshot")
+            raise BackupError(_("Ungültige Snapshot-Kennung."), code="backup_snapshot")
         stamp = now_utc().strftime("%Y%m%dT%H%M%SZ")
         work = self.settings.data_dir / "restore-tmp" / stamp
         work.mkdir(parents=True, exist_ok=False)
@@ -371,7 +377,7 @@ class BackupManager:
             self._restic(target, *args)
             databases = sorted(work.rglob(f"backup-staging/{STAGING_DB}"))
             if not databases:
-                raise BackupError("Der Snapshot enthält keine Datenbank.")
+                raise BackupError(_("Der Snapshot enthält keine Datenbank."))
             restored_db = databases[0]
             restored_books = restored_db.parent.parent / "books"
             report = self._verify_restored(restored_db, restored_books)
@@ -380,8 +386,11 @@ class BackupManager:
                 return report
             if not report["ok"]:
                 raise BackupError(
-                    "Die Wiederherstellung wurde nicht angewendet, weil die Prüfung "
-                    f"fehlgeschlagen ist: {report['problems'][:5]}"
+                    _(
+                        "Die Wiederherstellung wurde nicht angewendet, weil die Prüfung "
+                        "fehlgeschlagen ist: %(problems)s",
+                        problems=report["problems"][:5],
+                    )
                 )
             report["previous_state"] = str(self._swap_in(restored_db, restored_books, stamp))
             report["applied"] = True
@@ -401,10 +410,10 @@ class BackupManager:
         try:
             integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
             if integrity != "ok":
-                problems.append(f"Datenbank beschädigt: {integrity}")
+                problems.append(_("Datenbank beschädigt: %(detail)s", detail=integrity))
             foreign = conn.execute("PRAGMA foreign_key_check").fetchall()
             if foreign:
-                problems.append(f"{len(foreign)} verletzte Fremdschlüssel")
+                problems.append(_("%(count)s verletzte Fremdschlüssel", count=len(foreign)))
             rows = conn.execute(
                 "SELECT DISTINCT storage_key, size_bytes, sha256 FROM edition_files"
             ).fetchall()
@@ -421,7 +430,7 @@ class BackupManager:
         for row in rows:
             path = books_dir / row["storage_key"]
             if not path.is_file():
-                problems.append(f"Datei fehlt: {row['storage_key']}")
+                problems.append(_("Datei fehlt: %(key)s", key=row["storage_key"]))
                 continue
             digest = hashlib.sha256()
             with open(path, "rb") as handle:
@@ -429,12 +438,12 @@ class BackupManager:
                     digest.update(chunk)
             size = path.stat().st_size
             if size != row["size_bytes"] or digest.hexdigest() != row["sha256"]:
-                problems.append(f"Prüfsumme stimmt nicht: {row['storage_key']}")
+                problems.append(_("Prüfsumme stimmt nicht: %(key)s", key=row["storage_key"]))
             files += 1
             total += size
         for key in covers:
             if not (books_dir / key).is_file():
-                problems.append(f"Cover fehlt: {key}")
+                problems.append(_("Cover fehlt: %(key)s", key=key))
         return {
             "ok": not problems,
             "problems": problems,
@@ -529,8 +538,8 @@ class BackupManager:
             try:
                 conn.execute(
                     "UPDATE backup_runs SET status = 'failed', finished_at = ?,"
-                    " detail = 'Durch einen Neustart unterbrochen' WHERE status = 'running'",
-                    (now_iso(),),
+                    " detail = ? WHERE status = 'running'",
+                    (now_iso(), _("Durch einen Neustart unterbrochen")),
                 )
             finally:
                 conn.close()

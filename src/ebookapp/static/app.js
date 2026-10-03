@@ -3,6 +3,24 @@
 (function () {
   "use strict";
 
+  // Texte der Oberfläche in der Sprache der Seite (<html lang>): Deutsch oder Englisch.
+  var TEXTS = {
+    de: {
+      copied: "Kopiert.",
+      copyFailed: "Kopieren nicht möglich. Bitte den Text markieren und kopieren.",
+      copiedShort: "Kopiert",
+      copyManually: "Bitte manuell kopieren"
+    },
+    en: {
+      copied: "Copied.",
+      copyFailed: "Copying isn't possible. Please select the text and copy it.",
+      copiedShort: "Copied",
+      copyManually: "Please copy manually"
+    }
+  };
+  var lang = (document.documentElement.lang || "").toLowerCase().slice(0, 2);
+  var t = lang === "de" ? TEXTS.de : TEXTS.en;
+
   function textOf(element) {
     if ("value" in element && typeof element.value === "string") {
       return element.value;
@@ -29,13 +47,13 @@
 
   function report(button, ok) {
     var status = document.getElementById(button.getAttribute("data-copy-status") || "");
-    var message = ok ? "Kopiert." : "Kopieren nicht möglich. Bitte den Text markieren und kopieren.";
+    var message = ok ? t.copied : t.copyFailed;
     if (status) {
       status.textContent = message;
     } else {
       var original = button.getAttribute("data-label") || button.textContent;
       button.setAttribute("data-label", original);
-      button.textContent = ok ? "Kopiert" : "Bitte manuell kopieren";
+      button.textContent = ok ? t.copiedShort : t.copyManually;
       window.setTimeout(function () {
         button.textContent = original;
       }, 2500);

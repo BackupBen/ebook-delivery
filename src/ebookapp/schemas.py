@@ -13,21 +13,23 @@ from pydantic import (
     field_validator,
 )
 
+from .i18n import N_, _
+
 Format = Literal["pdf", "epub"]
 Scope = Literal["books:read", "books:write", "files:write", "links:manage"]
 SCOPES: tuple[str, ...] = ("books:read", "books:write", "files:write", "links:manage")
 SCOPE_LABELS = {
-    "books:read": "Bücher lesen",
-    "books:write": "Bücher bearbeiten",
-    "files:write": "Dateien hochladen",
-    "links:manage": "Käuferlinks verwalten",
+    "books:read": N_("Bücher lesen"),
+    "books:write": N_("Bücher bearbeiten"),
+    "files:write": N_("Dateien hochladen"),
+    "links:manage": N_("Käuferlinks verwalten"),
 }
 
 WHOP_PATTERN = r"^prod_[A-Za-z0-9_-]{3,64}$"
 
 Language = Literal["de", "en"]
 LANGUAGES: tuple[str, ...] = ("de", "en")
-LANGUAGE_LABELS = {"de": "Deutsch", "en": "Englisch"}
+LANGUAGE_LABELS = {"de": N_("Deutsch"), "en": N_("Englisch")}
 
 
 class _Input(BaseModel):
@@ -52,7 +54,7 @@ class BookCreate(_Input):
     whop_product_id: str | None = Field(
         default=None,
         pattern=WHOP_PATTERN,
-        description="Optionale Whop-Produkt-ID (prod_…). Wird nur gespeichert.",
+        description="Optionale Whop-Produkt-ID (prod_…). Ordnet Zahlungen aus Whop diesem Buch zu.",
         examples=["prod_AbC123xyz"],
     )
     language: Language = Field(
@@ -373,36 +375,36 @@ class ErrorOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 _MESSAGES = {
-    "missing": "Pflichtangabe fehlt.",
-    "string_too_short": "Die Angabe ist zu kurz (mindestens {min_length} Zeichen).",
-    "string_too_long": "Die Angabe ist zu lang (höchstens {max_length} Zeichen).",
-    "string_pattern_mismatch": "Die Angabe hat nicht das erwartete Format.",
-    "string_type": "Es wird Text erwartet.",
-    "int_type": "Es wird eine ganze Zahl erwartet.",
-    "int_parsing": "Es wird eine ganze Zahl erwartet.",
-    "int_from_float": "Es wird eine ganze Zahl erwartet.",
-    "bool_type": "Es wird true oder false erwartet.",
-    "bool_parsing": "Es wird true oder false erwartet.",
-    "greater_than_equal": "Der Wert muss mindestens {ge} sein.",
-    "less_than_equal": "Der Wert darf höchstens {le} sein.",
-    "literal_error": "Erlaubt sind: {expected}.",
-    "extra_forbidden": "Dieses Feld ist nicht bekannt.",
-    "list_type": "Es wird eine Liste erwartet.",
-    "too_short": "Es wird mindestens ein Eintrag benötigt.",
-    "too_long": "Zu viele Einträge.",
-    "datetime_parsing": (
+    "missing": N_("Pflichtangabe fehlt."),
+    "string_too_short": N_("Die Angabe ist zu kurz (mindestens {min_length} Zeichen)."),
+    "string_too_long": N_("Die Angabe ist zu lang (höchstens {max_length} Zeichen)."),
+    "string_pattern_mismatch": N_("Die Angabe hat nicht das erwartete Format."),
+    "string_type": N_("Es wird Text erwartet."),
+    "int_type": N_("Es wird eine ganze Zahl erwartet."),
+    "int_parsing": N_("Es wird eine ganze Zahl erwartet."),
+    "int_from_float": N_("Es wird eine ganze Zahl erwartet."),
+    "bool_type": N_("Es wird true oder false erwartet."),
+    "bool_parsing": N_("Es wird true oder false erwartet."),
+    "greater_than_equal": N_("Der Wert muss mindestens {ge} sein."),
+    "less_than_equal": N_("Der Wert darf höchstens {le} sein."),
+    "literal_error": N_("Erlaubt sind: {expected}."),
+    "extra_forbidden": N_("Dieses Feld ist nicht bekannt."),
+    "list_type": N_("Es wird eine Liste erwartet."),
+    "too_short": N_("Es wird mindestens ein Eintrag benötigt."),
+    "too_long": N_("Zu viele Einträge."),
+    "datetime_parsing": N_(
         "Ungültiges Datum. Erwartet wird ISO 8601, z. B. 2030-01-31T23:59:00+01:00."
     ),
-    "datetime_from_date_parsing": "Ungültiges Datum.",
-    "datetime_type": "Ungültiges Datum.",
-    "timezone_aware": "Das Datum benötigt eine Zeitzone, z. B. 2030-01-31T23:59:00+01:00.",
-    "value_error": "Ungültiger Wert.",
-    "json_invalid": "Der Anfragekörper ist kein gültiges JSON.",
-    "model_attributes_type": "Es wird ein JSON-Objekt erwartet.",
-    "dict_type": "Es wird ein JSON-Objekt erwartet.",
+    "datetime_from_date_parsing": N_("Ungültiges Datum."),
+    "datetime_type": N_("Ungültiges Datum."),
+    "timezone_aware": N_("Das Datum benötigt eine Zeitzone, z. B. 2030-01-31T23:59:00+01:00."),
+    "value_error": N_("Ungültiger Wert."),
+    "json_invalid": N_("Der Anfragekörper ist kein gültiges JSON."),
+    "model_attributes_type": N_("Es wird ein JSON-Objekt erwartet."),
+    "dict_type": N_("Es wird ein JSON-Objekt erwartet."),
 }
 
-_WHOP_HINT = "Die Whop-Produkt-ID muss mit „prod_“ beginnen (Buchstaben, Ziffern, _ und -)."
+_WHOP_HINT = N_("Die Whop-Produkt-ID muss mit „prod_“ beginnen (Buchstaben, Ziffern, _ und -).")
 
 
 def translate_errors(errors: list[dict[str, Any]]) -> list[dict[str, str]]:
@@ -411,15 +413,15 @@ def translate_errors(errors: list[dict[str, Any]]) -> list[dict[str, str]]:
     for error in errors:
         location = [str(part) for part in error.get("loc", ()) if part not in ("body", "query")]
         field = ".".join(location) or "body"
-        template = _MESSAGES.get(error.get("type", ""), "Ungültiger Wert.")
+        template = _(_MESSAGES.get(error.get("type", ""), "Ungültiger Wert."))
         try:
             message = template.format(**(error.get("ctx") or {}))
         except (KeyError, IndexError):
             message = template
         if field == "whop_product_id" and error.get("type") == "string_pattern_mismatch":
-            message = _WHOP_HINT
+            message = _(_WHOP_HINT)
         if field == "email" and error.get("type") == "string_pattern_mismatch":
-            message = "Bitte eine gültige E-Mail-Adresse angeben."
+            message = _("Bitte eine gültige E-Mail-Adresse angeben.")
         result.append({"field": field, "message": message})
     return result
 

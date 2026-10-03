@@ -7,6 +7,7 @@ from typing import Any, BinaryIO
 
 from ..db import now_iso, transaction
 from ..errors import Conflict, Invalid, NotFound, field_error
+from ..i18n import _
 from ..schemas import BookCreate, BookUpdate, EditionCreate, EditionPublish
 from ..security import new_id
 from ..storage import Storage
@@ -112,7 +113,7 @@ def book_out(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
 def get_book_row(conn: sqlite3.Connection, book_id: str) -> sqlite3.Row:
     row = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
     if row is None:
-        raise NotFound("Dieses Buch gibt es nicht.", code="book_not_found")
+        raise NotFound(_("Dieses Buch gibt es nicht."), code="book_not_found")
     return row
 
 
@@ -180,7 +181,7 @@ def _escape_like(text: str) -> str:
 def update_book(conn: sqlite3.Connection, book_id: str, data: BookUpdate) -> dict[str, Any]:
     changes = {name: getattr(data, name) for name in data.model_fields_set}
     if "title" in changes and changes["title"] is None:
-        raise field_error("title", "Der Titel darf nicht leer sein.")
+        raise field_error("title", _("Der Titel darf nicht leer sein."))
     if "description" in changes and changes["description"] is None:
         changes["description"] = ""
     if "language" in changes and changes["language"] is None:
@@ -253,7 +254,10 @@ def delete_book(
         ]
         if expected_link_count != total:
             raise Conflict(
-                f"Die Löschung wurde nicht bestätigt: Es würden {total} Käuferlinks ungültig.",
+                _(
+                    "Die Löschung wurde nicht bestätigt: Es würden %(total)s Käuferlinks ungültig.",
+                    total=total,
+                ),
                 code="confirmation_mismatch",
                 details={"links_total": total},
             )
@@ -327,7 +331,7 @@ def _edition_row(conn: sqlite3.Connection, book_id: str, edition_id: str) -> sql
         "SELECT * FROM editions WHERE id = ? AND book_id = ?", (edition_id, book_id)
     ).fetchone()
     if row is None:
-        raise NotFound("Diese Ausgabe gibt es nicht.", code="edition_not_found")
+        raise NotFound(_("Diese Ausgabe gibt es nicht."), code="edition_not_found")
     return row
 
 
@@ -353,8 +357,10 @@ def create_edition(conn: sqlite3.Connection, book_id: str, data: EditionCreate) 
             "SELECT 1 FROM editions WHERE book_id = ? AND status = 'draft'", (book_id,)
         ).fetchone():
             raise Conflict(
-                "Es gibt bereits einen Entwurf für eine neue Ausgabe. Veröffentliche oder "
-                "lösche ihn zuerst.",
+                _(
+                    "Es gibt bereits einen Entwurf für eine neue Ausgabe. Veröffentliche oder "
+                    "lösche ihn zuerst."
+                ),
                 code="draft_exists",
             )
         number = conn.execute(
@@ -375,7 +381,10 @@ def create_edition(conn: sqlite3.Connection, book_id: str, data: EditionCreate) 
             if source is None:
                 raise field_error(
                     "copy_formats",
-                    f"Die aktuelle Ausgabe enthält keine {fmt.upper()}-Datei zum Übernehmen.",
+                    _(
+                        "Die aktuelle Ausgabe enthält keine %(format)s-Datei zum Übernehmen.",
+                        format=fmt.upper(),
+                    ),
                 )
             conn.execute(
                 "INSERT INTO edition_files (id, edition_id, format, storage_key,"
@@ -398,8 +407,10 @@ def create_edition(conn: sqlite3.Connection, book_id: str, data: EditionCreate) 
 def _require_draft(row: sqlite3.Row) -> None:
     if row["status"] != "draft":
         raise Conflict(
-            "Veröffentlichte Ausgaben sind unveränderlich. Lege für geänderte Dateien eine "
-            "neue Ausgabe an.",
+            _(
+                "Veröffentlichte Ausgaben sind unveränderlich. Lege für geänderte Dateien eine "
+                "neue Ausgabe an."
+            ),
             code="edition_published",
         )
 
@@ -428,32 +439,36 @@ def upload_files(
     """
     for fmt in uploads:
         if fmt not in FORMATS:
-            raise field_error("format", "Erlaubt sind die Formate pdf und epub.")
+            raise field_error("format", _("Erlaubt sind die Formate pdf und epub."))
     get_book_row(conn, book_id)
     _require_draft(_edition_row(conn, book_id, edition_id))
-    for fmt, (_, filename, content_type) in uploads.items():
+    for fmt, (_source, filename, content_type) in uploads.items():
         check_declared(fmt, filename, content_type, fmt)
 
     staged: list[tuple[str, Any, str | None]] = []
     keys: dict[str, str] = {}
     old_keys: list[str] = []
     try:
-        for fmt, (source, filename, _) in uploads.items():
+        for fmt, (source, filename, _ctype) in uploads.items():
             limit_mb = max_bytes[fmt] // (1024 * 1024)
             temp = storage.write_temp(
                 source,
                 max_bytes[fmt],
-                f"Die {fmt.upper()}-Datei ist größer als erlaubt ({limit_mb} MB).",
+                _(
+                    "Die %(format)s-Datei ist größer als erlaubt (%(limit)s MB).",
+                    format=fmt.upper(),
+                    limit=limit_mb,
+                ),
             )
             staged.append((fmt, temp, filename))
             if temp.size == 0:
-                raise field_error(fmt, "Die Datei ist leer.")
+                raise field_error(fmt, _("Die Datei ist leer."))
             if fmt == "pdf":
                 validate_pdf(temp.path, "pdf")
             else:
                 validate_epub(temp.path, epub_limits, "epub")
 
-        for fmt, temp, _ in staged:
+        for fmt, temp, _name in staged:
             keys[fmt] = storage.commit(temp.path, book_id, EXTENSIONS[fmt][0])
         with transaction(conn):
             _require_draft(_edition_row(conn, book_id, edition_id))
@@ -482,7 +497,7 @@ def upload_files(
                 )
             conn.execute("UPDATE books SET updated_at = ? WHERE id = ?", (now_iso(), book_id))
     except BaseException:
-        for _, temp, _ in staged:
+        for _fmt, temp, _name in staged:
             storage.discard(temp.path)
         for key in keys.values():
             storage.delete(key)
@@ -502,7 +517,7 @@ def delete_file(
             "SELECT * FROM edition_files WHERE edition_id = ? AND format = ?", (edition_id, fmt)
         ).fetchone()
         if row is None:
-            raise NotFound("Diese Datei gibt es nicht.", code="file_not_found")
+            raise NotFound(_("Diese Datei gibt es nicht."), code="file_not_found")
         conn.execute("DELETE FROM edition_files WHERE id = ?", (row["id"],))
     _release_key(conn, storage, row["storage_key"])
     return get_edition(conn, book_id, edition_id)
@@ -516,8 +531,10 @@ def delete_edition(
         row = _edition_row(conn, book_id, edition_id)
         if book["current_edition_id"] == edition_id:
             raise Conflict(
-                "Die aktuelle Ausgabe kann nicht gelöscht werden. Veröffentliche zuerst eine "
-                "andere Ausgabe oder lösche das ganze Buch.",
+                _(
+                    "Die aktuelle Ausgabe kann nicht gelöscht werden. Veröffentliche zuerst "
+                    "eine andere Ausgabe oder lösche das ganze Buch."
+                ),
                 code="edition_is_current",
             )
         bound = conn.execute(
@@ -525,8 +542,12 @@ def delete_edition(
         ).fetchone()[0]
         if bound:
             raise Conflict(
-                f"An diese Ausgabe sind noch {bound} Käuferlinks gebunden (auch widerrufene "
-                "zählen). Stelle sie zuerst auf eine andere Ausgabe um oder lösche sie.",
+                _(
+                    "An diese Ausgabe sind noch %(count)s Käuferlinks gebunden (auch "
+                    "widerrufene zählen). Stelle sie zuerst auf eine andere Ausgabe um oder "
+                    "lösche sie.",
+                    count=bound,
+                ),
                 code="edition_has_links",
                 details={"links": bound},
             )
@@ -554,22 +575,23 @@ def publish_edition(
         get_book_row(conn, book_id)
         row = _edition_row(conn, book_id, edition_id)
         if row["status"] != "draft":
-            raise Conflict("Diese Ausgabe ist bereits veröffentlicht.", code="edition_published")
+            raise Conflict(_("Diese Ausgabe ist bereits veröffentlicht."), code="edition_published")
         if not conn.execute(
             "SELECT 1 FROM edition_files WHERE edition_id = ?", (edition_id,)
         ).fetchone():
             raise Invalid(
-                "Die Ausgabe enthält noch keine Datei. Lade zuerst ein PDF oder EPUB hoch.",
+                _("Die Ausgabe enthält noch keine Datei. Lade zuerst ein PDF oder EPUB hoch."),
                 code="edition_empty",
             )
         existing = conn.execute(
             "SELECT COUNT(*) FROM links WHERE book_id = ? AND status != 'revoked'", (book_id,)
         ).fetchone()[0]
         if existing and data.existing_links is None:
-            message = (
-                f"Das Buch hat {existing} bestehende Käuferlinks. Wähle ausdrücklich, ob sie "
+            message = _(
+                "Das Buch hat %(count)s bestehende Käuferlinks. Wähle ausdrücklich, ob sie "
                 "die neue Ausgabe erhalten (migrate) oder an ihrer bisherigen Ausgabe bleiben "
-                "(keep)."
+                "(keep).",
+                count=existing,
             )
             raise Invalid(
                 message,
@@ -630,7 +652,7 @@ def migrate_links(conn: sqlite3.Connection, book_id: str, edition_id: str) -> di
         row = _edition_row(conn, book_id, edition_id)
         if row["status"] != "published":
             raise Conflict(
-                "Links können nur an veröffentlichte Ausgaben gebunden werden.",
+                _("Links können nur an veröffentlichte Ausgaben gebunden werden."),
                 code="edition_not_published",
             )
         migrated, skipped = _migrate(conn, book_id, edition_id, now_iso())

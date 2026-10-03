@@ -11,6 +11,7 @@ from typing import Any
 from ..config import Settings
 from ..db import iso, now_iso, now_utc, parse_iso, transaction
 from ..errors import NotFound, field_error
+from ..i18n import _
 from ..schemas import SCOPES, ApiKeyCreate, PasswordChange
 from ..security import (
     API_KEY_RE,
@@ -97,10 +98,10 @@ def change_password(
 ) -> None:
     row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if row is None or not verify_password(data.current_password, row["password_hash"]):
-        raise field_error("current_password", "Das aktuelle Passwort ist nicht korrekt.")
+        raise field_error("current_password", _("Das aktuelle Passwort ist nicht korrekt."))
     if data.new_password != data.new_password_repeat:
         raise field_error(
-            "new_password_repeat", "Die beiden neuen Passwörter stimmen nicht überein."
+            "new_password_repeat", _("Die beiden neuen Passwörter stimmen nicht überein.")
         )
     with transaction(conn):
         conn.execute(
@@ -232,7 +233,7 @@ def revoke_api_key(conn: sqlite3.Connection, key_id: str) -> None:
         (now_iso(), key_id),
     )
     if cursor.rowcount == 0:
-        raise NotFound("Diesen API-Schlüssel gibt es nicht.", code="api_key_not_found")
+        raise NotFound(_("Diesen API-Schlüssel gibt es nicht."), code="api_key_not_found")
 
 
 def authenticate_api_key(conn: sqlite3.Connection, token: str) -> dict[str, Any] | None:

@@ -1,40 +1,42 @@
 {% extends "admin/base.html" %}
 {% from "admin/_macros.html" import state_badge, field_error %}
-{% block title %}{{ preview.title }} löschen{% endblock %}
+{% block title %}{{ _("%(title)s löschen", title=preview.title) }}{% endblock %}
 {% block content %}
-<p class="breadcrumb"><a href="/admin/books">Bücher</a> › <a href="/admin/books/{{ preview.book_id }}">{{ preview.title }}</a> › Löschen</p>
-<h1>„{{ preview.title }}“ löschen</h1>
+<p class="breadcrumb"><a href="/admin/books">{{ _("Bücher") }}</a> › <a href="/admin/books/{{ preview.book_id }}">{{ preview.title }}</a> › {{ _("Löschen") }}</p>
+<h1>{{ _("„%(title)s“ löschen", title=preview.title) }}</h1>
 
 <div class="alert alert-warn">
-  <h2>Das wird endgültig gelöscht</h2>
+  <h2>{{ _("Das wird endgültig gelöscht") }}</h2>
   <ul>
-    <li>das Buch mit {{ preview.editions }} {{ "Ausgabe" if preview.editions == 1 else "Ausgaben" }} und {{ preview.files }} {{ "Datei" if preview.files == 1 else "Dateien" }}</li>
-    <li><strong>{{ preview.links_total }} {{ "Downloadlink" if preview.links_total == 1 else "Downloadlinks" }}</strong>, davon {{ preview.links_active }} derzeit aktiv. Käufer sehen danach „Link nicht gefunden“.</li>
-    <li>die Downloadstatistik dieses Buchs</li>
+    {% set editions_text = _("%(n)s Ausgabe", n=preview.editions) if preview.editions == 1 else _("%(n)s Ausgaben", n=preview.editions) %}
+    {% set files_text = _("%(n)s Datei", n=preview.files) if preview.files == 1 else _("%(n)s Dateien", n=preview.files) %}
+    <li>{{ _("das Buch mit %(editions)s und %(files)s", editions=editions_text, files=files_text) }}</li>
+    <li>{{ (_("<strong>%(n)s Downloadlink</strong>, davon %(active)s derzeit aktiv. Käufer sehen danach „Link nicht gefunden“.", n=preview.links_total, active=preview.links_active) if preview.links_total == 1 else _("<strong>%(n)s Downloadlinks</strong>, davon %(active)s derzeit aktiv. Käufer sehen danach „Link nicht gefunden“.", n=preview.links_total, active=preview.links_active)) | safe }}</li>
+    <li>{{ _("die Downloadstatistik dieses Buchs") }}</li>
   </ul>
-  <p>Die Löschung lässt sich nur über ein Backup rückgängig machen. Wenn du das Buch nur ausblenden möchtest, archiviere es stattdessen.</p>
+  <p>{{ _("Die Löschung lässt sich nur über ein Backup rückgängig machen. Wenn du das Buch nur ausblenden möchtest, archiviere es stattdessen.") }}</p>
 </div>
 
 {% if preview.links %}
 <section class="card" aria-labelledby="h-affected">
-  <h2 id="h-affected">Diese Links werden ungültig</h2>
+  <h2 id="h-affected">{{ _("Diese Links werden ungültig") }}</h2>
   <div class="table-wrap">
     <table class="responsive">
-      <thead><tr><th scope="col">Bezeichnung</th><th scope="col">Link-ID</th><th scope="col">Zustand</th><th scope="col" class="num">Downloads</th><th scope="col">Erstellt</th></tr></thead>
+      <thead><tr><th scope="col">{{ _("Bezeichnung") }}</th><th scope="col">{{ _("Link-ID") }}</th><th scope="col">{{ _("Zustand") }}</th><th scope="col" class="num">{{ _("Downloads") }}</th><th scope="col">{{ _("Erstellt") }}</th></tr></thead>
       <tbody>
         {% for link in preview.links %}
         <tr>
-          <td class="primary">{{ link.label or "Ohne Bezeichnung" }}</td>
-          <td data-label="Link-ID" class="mono small">{{ link.id }}</td>
-          <td data-label="Zustand">{{ state_badge(link.state) }}</td>
-          <td data-label="Downloads" class="num">{{ link.download_count }}</td>
-          <td data-label="Erstellt">{{ link.created_at | dt }}</td>
+          <td class="primary">{{ link.label or _("Ohne Bezeichnung") }}</td>
+          <td data-label="{{ _('Link-ID') }}" class="mono small">{{ link.id }}</td>
+          <td data-label="{{ _('Zustand') }}">{{ state_badge(link.state) }}</td>
+          <td data-label="{{ _('Downloads') }}" class="num">{{ link.download_count }}</td>
+          <td data-label="{{ _('Erstellt') }}">{{ link.created_at | dt }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  {% if preview.links_truncated %}<p class="hint">Die Liste zeigt die neuesten {{ preview.links | length }} von {{ preview.links_total }} Links. Ungültig werden alle {{ preview.links_total }}.</p>{% endif %}
+  {% if preview.links_truncated %}<p class="hint">{{ _("Die Liste zeigt die neuesten %(shown)s von %(total)s Links. Ungültig werden alle %(total)s.", shown=preview.links | length, total=preview.links_total) }}</p>{% endif %}
 </section>
 {% endif %}
 
@@ -43,12 +45,12 @@
   <input type="hidden" name="expected_link_count" value="{{ preview.links_total }}">
   <label class="check">
     <input type="checkbox" name="confirm" value="1" required>
-    <span>Ja, „{{ preview.title }}“ endgültig löschen. Mir ist klar, dass dadurch {{ preview.links_total }} {{ "Downloadlink" if preview.links_total == 1 else "Downloadlinks" }} ungültig {{ "wird" if preview.links_total == 1 else "werden" }}.</span>
+    <span>{{ _("Ja, „%(title)s“ endgültig löschen. Mir ist klar, dass dadurch %(n)s Downloadlink ungültig wird.", title=preview.title, n=preview.links_total) if preview.links_total == 1 else _("Ja, „%(title)s“ endgültig löschen. Mir ist klar, dass dadurch %(n)s Downloadlinks ungültig werden.", title=preview.title, n=preview.links_total) }}</span>
   </label>
   {{ field_error(error, "confirm") }}
   <div class="row">
-    <button class="btn btn-danger" type="submit">Endgültig löschen</button>
-    <a class="btn btn-secondary" href="/admin/books/{{ preview.book_id }}">Abbrechen</a>
+    <button class="btn btn-danger" type="submit">{{ _("Endgültig löschen") }}</button>
+    <a class="btn btn-secondary" href="/admin/books/{{ preview.book_id }}">{{ _("Abbrechen") }}</a>
   </div>
 </form>
 {% endblock %}

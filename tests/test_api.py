@@ -746,8 +746,13 @@ def test_openapi_and_docs(env: Env, admin) -> None:
 def test_checked_in_openapi_file_is_up_to_date(env: Env) -> None:
     from pathlib import Path
 
-    spec = env.api(["books:read"]).get("/api/v1/openapi.json").json()
-    stored = json.loads((Path(__file__).parent.parent / "docs" / "openapi.json").read_text())
+    # Die eingecheckte Datei ist die englische Standardfassung.
+    client = env.new_client(language=None)
+    client.headers["Authorization"] = f"Bearer {env.api_key(['books:read'])}"
+    spec = client.get("/api/v1/openapi.json").json()
+    stored = json.loads(
+        (Path(__file__).parent.parent / "docs" / "openapi.json").read_text(encoding="utf-8")
+    )
     assert stored == spec, "docs/openapi.json ist veraltet: scripts/export-openapi.sh ausführen"
 
 

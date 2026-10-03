@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 from ..db import iso, now_iso, now_utc, transaction
 from ..errors import Conflict, NotFound, field_error
+from ..i18n import _
 from ..schemas import LinkCreate, LinkUpdate
 from ..security import CODE_RE, new_id, new_link_code, sha256_hex
 
@@ -61,7 +62,7 @@ def link_out(row: sqlite3.Row) -> dict[str, Any]:
 def _row(conn: sqlite3.Connection, link_id: str) -> sqlite3.Row:
     row = conn.execute(f"{SELECT} WHERE l.id = :id", {"id": link_id, "now": now_iso()}).fetchone()
     if row is None:
-        raise NotFound("Diesen Link gibt es nicht.", code="link_not_found")
+        raise NotFound(_("Diesen Link gibt es nicht."), code="link_not_found")
     return row
 
 
@@ -78,10 +79,10 @@ def _published_edition(conn: sqlite3.Connection, book_id: str, edition_id: str) 
         "SELECT * FROM editions WHERE id = ? AND book_id = ?", (edition_id, book_id)
     ).fetchone()
     if row is None:
-        raise field_error("edition_id", "Diese Ausgabe gehört nicht zu dem Buch.")
+        raise field_error("edition_id", _("Diese Ausgabe gehört nicht zu dem Buch."))
     if row["status"] != "published":
         raise field_error(
-            "edition_id", "Links können nur an veröffentlichte Ausgaben gebunden werden."
+            "edition_id", _("Links können nur an veröffentlichte Ausgaben gebunden werden.")
         )
     return row
 
@@ -90,7 +91,7 @@ def _check_future(expires_at: Any) -> str | None:
     if expires_at is None:
         return None
     if expires_at <= now_utc():
-        raise field_error("expires_at", "Das Ablaufdatum muss in der Zukunft liegen.")
+        raise field_error("expires_at", _("Das Ablaufdatum muss in der Zukunft liegen."))
     return iso(expires_at)
 
 
@@ -103,17 +104,19 @@ def create_link(conn: sqlite3.Connection, data: LinkCreate) -> tuple[dict[str, A
     with transaction(conn):
         book = conn.execute("SELECT * FROM books WHERE id = ?", (data.book_id,)).fetchone()
         if book is None:
-            raise field_error("book_id", "Dieses Buch gibt es nicht.")
+            raise field_error("book_id", _("Dieses Buch gibt es nicht."))
         if book["status"] == "archived":
             raise field_error(
-                "book_id", "Für archivierte Bücher können keine neuen Links erstellt werden."
+                "book_id", _("Für archivierte Bücher können keine neuen Links erstellt werden.")
             )
         edition_id = data.edition_id or book["current_edition_id"]
         if not edition_id:
             raise field_error(
                 "book_id",
-                "Das Buch hat noch keine veröffentlichte Ausgabe. Lade Dateien hoch und "
-                "veröffentliche die Ausgabe zuerst.",
+                _(
+                    "Das Buch hat noch keine veröffentlichte Ausgabe. Lade Dateien hoch und "
+                    "veröffentliche die Ausgabe zuerst."
+                ),
             )
         _published_edition(conn, book["id"], edition_id)
         available = {
@@ -124,7 +127,7 @@ def create_link(conn: sqlite3.Connection, data: LinkCreate) -> tuple[dict[str, A
         }
         if not available.intersection(data.formats):
             raise field_error(
-                "formats", "Die Ausgabe enthält keine Datei in den ausgewählten Formaten."
+                "formats", _("Die Ausgabe enthält keine Datei in den ausgewählten Formaten.")
             )
         conn.execute(
             "INSERT INTO links (id, book_id, edition_id, code_hash, label, allow_pdf, allow_epub,"
@@ -195,7 +198,7 @@ def update_link(conn: sqlite3.Connection, link_id: str, data: LinkUpdate) -> dic
         row = _row(conn, link_id)
         if row["status"] == "revoked":
             raise Conflict(
-                "Widerrufene Links können nicht mehr geändert werden.", code="link_revoked"
+                _("Widerrufene Links können nicht mehr geändert werden."), code="link_revoked"
             )
         changes: dict[str, Any] = {}
         if "label" in fields:
@@ -226,8 +229,10 @@ def update_link(conn: sqlite3.Connection, link_id: str, data: LinkUpdate) -> dic
             if not allowed & available:
                 raise field_error(
                     "formats",
-                    "Die Ausgabe enthält keine Datei in den freigegebenen Formaten. Der Link "
-                    "würde nichts mehr anbieten.",
+                    _(
+                        "Die Ausgabe enthält keine Datei in den freigegebenen Formaten. Der "
+                        "Link würde nichts mehr anbieten."
+                    ),
                 )
         if changes:
             assignments = ", ".join(f"{column} = ?" for column in changes)
@@ -257,7 +262,8 @@ def delete_link(conn: sqlite3.Connection, link_id: str) -> None:
         row = _row(conn, link_id)
         if row["status"] != "revoked":
             raise Conflict(
-                "Nur widerrufene Links können endgültig gelöscht werden.", code="link_not_revoked"
+                _("Nur widerrufene Links können endgültig gelöscht werden."),
+                code="link_not_revoked",
             )
         conn.execute("DELETE FROM links WHERE id = ?", (link_id,))
 
@@ -286,7 +292,7 @@ def lookup(conn: sqlite3.Connection, text: str) -> dict[str, Any]:
             f"{SELECT} WHERE l.code_hash = :hash", {"hash": sha256_hex(code), "now": now_iso()}
         ).fetchone()
     if row is None:
-        raise NotFound("Zu diesem Code gibt es keinen Link.", code="link_not_found")
+        raise NotFound(_("Zu diesem Code gibt es keinen Link."), code="link_not_found")
     return link_out(row)
 
 

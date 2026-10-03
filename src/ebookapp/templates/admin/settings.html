@@ -1,16 +1,16 @@
 {% extends "admin/base.html" %}
 {% from "admin/_macros.html" import field_error, invalid %}
-{% block title %}Einstellungen &amp; Backups{% endblock %}
+{% block title %}{{ _("Einstellungen & Backups") }}{% endblock %}
 {% block content %}
-<h1>Einstellungen &amp; Backups</h1>
+<h1>{{ _("Einstellungen & Backups") }}</h1>
 
 <div class="grid-2">
   <section class="card" aria-labelledby="h-general" id="versand">
-    <h2 id="h-general">Uploads und Versandnachricht</h2>
+    <h2 id="h-general">{{ _("Uploads und Versandnachricht") }}</h2>
     <form method="post" action="/admin/settings">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <fieldset>
-        <legend>Maximale Dateigrößen in MB</legend>
+        <legend>{{ _("Maximale Dateigrößen in MB") }}</legend>
         <div class="field">
           <label for="max_pdf_mb">PDF</label>
           <input id="max_pdf_mb" name="max_pdf_mb" type="number" min="1" max="{{ limits.hard_mb }}" required value="{{ values.max_pdf_mb or limits.pdf_mb }}" {{ invalid(error, "max_pdf_mb") }}>
@@ -22,121 +22,121 @@
           {{ field_error(error, "max_epub_mb") }}
         </div>
         <div class="field">
-          <label for="max_cover_mb">Cover</label>
+          <label for="max_cover_mb">{{ _("Cover") }}</label>
           <input id="max_cover_mb" name="max_cover_mb" type="number" min="1" max="{{ limits.hard_mb }}" required value="{{ values.max_cover_mb or limits.cover_mb }}" {{ invalid(error, "max_cover_mb") }}>
           {{ field_error(error, "max_cover_mb") }}
         </div>
-        <p class="hint">Gilt für Oberfläche und API. Obergrenze dieser Installation: {{ limits.hard_mb }} MB (Umgebungsvariable <code>MAX_UPLOAD_MB</code>).</p>
+        <p class="hint">{{ _("Gilt für Oberfläche und API. Obergrenze dieser Installation: %(mb)s MB (Umgebungsvariable <code>MAX_UPLOAD_MB</code>).", mb=limits.hard_mb | e) | safe }}</p>
       </fieldset>
       <div class="field">
-        <label for="message_template">Vorlage der Versandnachricht</label>
+        <label for="message_template">{{ _("Vorlage der Versandnachricht") }}</label>
         <textarea id="message_template" name="message_template" rows="11" maxlength="5000" required {{ invalid(error, "message_template") }}>{{ values.message_template or message_template }}</textarea>
-        <p class="hint">Für Bücher auf Deutsch. Platzhalter: <code>{titel}</code>, <code>{link}</code>, <code>{gueltigkeit}</code>, <code>{name}</code> (nur bei E-Mails aus Whop gefüllt, sonst entfernt).</p>
+        <p class="hint">{{ _("Für Bücher auf Deutsch. Platzhalter: <code>{titel}</code>, <code>{link}</code>, <code>{gueltigkeit}</code>, <code>{name}</code> (nur bei E-Mails aus Whop gefüllt, sonst entfernt).") | safe }}</p>
         {{ field_error(error, "message_template") }}
       </div>
       <div class="field">
-        <label for="message_template_en">Vorlage der Versandnachricht (Englisch)</label>
+        <label for="message_template_en">{{ _("Vorlage der Versandnachricht (Englisch)") }}</label>
         <textarea id="message_template_en" name="message_template_en" rows="11" maxlength="5000" required {{ invalid(error, "message_template_en") }}>{{ values.message_template_en or message_template_en }}</textarea>
-        <p class="hint">Für Bücher auf Englisch. Gleiche Platzhalter; <code>{gueltigkeit}</code> wird auf Englisch eingesetzt.</p>
+        <p class="hint">{{ _("Für Bücher auf Englisch. Gleiche Platzhalter; <code>{gueltigkeit}</code> wird auf Englisch eingesetzt.") | safe }}</p>
         {{ field_error(error, "message_template_en") }}
       </div>
       <fieldset>
-        <legend>Betreff der E-Mail an Whop-Käufer</legend>
+        <legend>{{ _("Betreff der E-Mail an Whop-Käufer") }}</legend>
         <div class="field">
-          <label for="mail_subject">Deutsch</label>
+          <label for="mail_subject">{{ _("Deutsch") }}</label>
           <input id="mail_subject" name="mail_subject" type="text" maxlength="200" value="{{ values.mail_subject or mail_subject }}" {{ invalid(error, "mail_subject") }}>
           {{ field_error(error, "mail_subject") }}
         </div>
         <div class="field">
-          <label for="mail_subject_en">Englisch</label>
+          <label for="mail_subject_en">{{ _("Englisch") }}</label>
           <input id="mail_subject_en" name="mail_subject_en" type="text" maxlength="200" value="{{ values.mail_subject_en or mail_subject_en }}" {{ invalid(error, "mail_subject_en") }}>
           {{ field_error(error, "mail_subject_en") }}
         </div>
-        <p class="hint">Die E-Mail an Käufer aus Whop verwendet die Versandnachricht oben als Text. Zusätzlicher Platzhalter: <code>{name}</code> (Name des Käufers; ohne Namen entfällt er samt Leerzeichen, z. B. „Hallo {name},“ → „Hallo,“).</p>
+        <p class="hint">{{ _("Die E-Mail an Käufer aus Whop verwendet die Versandnachricht oben als Text. Zusätzlicher Platzhalter: <code>{name}</code> (Name des Käufers; ohne Namen entfällt er samt Leerzeichen, z. B. „Hallo {name},“ → „Hallo,“).") | safe }}</p>
       </fieldset>
-      <button class="btn" type="submit">Einstellungen speichern</button>
+      <button class="btn" type="submit">{{ _("Einstellungen speichern") }}</button>
     </form>
   </section>
 
   <section class="card" aria-labelledby="h-mail">
-    <h2 id="h-mail">E-Mail-Versand (Brevo)</h2>
+    <h2 id="h-mail">{{ _("E-Mail-Versand (Brevo)") }}</h2>
     <dl class="facts small">
-      <dt>Versand</dt><dd>{% if mail_configured %}<span class="badge badge-active">eingerichtet</span>{% else %}<span class="badge badge-disabled">nicht eingerichtet</span>{% endif %}</dd>
-      <dt>Absender</dt><dd>{% if mail_from %}{{ mail_from_name ~ " " if mail_from_name }}&lt;{{ mail_from }}&gt;{% else %}–{% endif %}</dd>
-      <dt>Whop-Webhook</dt><dd>{% if whop_configured %}<span class="badge badge-active">Geheimnis gesetzt</span>{% else %}<span class="badge badge-disabled">nicht eingerichtet</span>{% endif %} <a href="/admin/orders">Bestellungen</a></dd>
+      <dt>{{ _("Versand") }}</dt><dd>{% if mail_configured %}<span class="badge badge-active">{{ _("eingerichtet") }}</span>{% else %}<span class="badge badge-disabled">{{ _("nicht eingerichtet") }}</span>{% endif %}</dd>
+      <dt>{{ _("Absender") }}</dt><dd>{% if mail_from %}{{ mail_from_name ~ " " if mail_from_name }}&lt;{{ mail_from }}&gt;{% else %}–{% endif %}</dd>
+      <dt>{{ _("Whop-Webhook") }}</dt><dd>{% if whop_configured %}<span class="badge badge-active">{{ _("Geheimnis gesetzt") }}</span>{% else %}<span class="badge badge-disabled">{{ _("nicht eingerichtet") }}</span>{% endif %} <a href="/admin/orders">{{ _("Bestellungen") }}</a></dd>
     </dl>
     {% if not mail_configured %}
-    <p class="hint">Für den Versand die Umgebungsvariablen <code>BREVO_API_KEY</code> und <code>MAIL_FROM_EMAIL</code> setzen (optional <code>MAIL_FROM_NAME</code>, <code>MAIL_REPLY_TO</code>). Die Absender-Domain muss in Brevo bestätigt sein.</p>
+    <p class="hint">{{ _("Für den Versand die Umgebungsvariablen <code>BREVO_API_KEY</code> und <code>MAIL_FROM_EMAIL</code> setzen (optional <code>MAIL_FROM_NAME</code>, <code>MAIL_REPLY_TO</code>). Die Absender-Domain muss in Brevo bestätigt sein.") | safe }}</p>
     {% else %}
     <form method="post" action="/admin/settings/mail-test">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
-        <label for="test_email">Test-E-Mail an</label>
+        <label for="test_email">{{ _("Test-E-Mail an") }}</label>
         <input id="test_email" name="email" type="email" required maxlength="254" autocomplete="email" {{ invalid(error, "email") }}>
         {{ field_error(error, "email") }}
       </div>
       <div class="field">
-        <label for="test_language">Sprache</label>
+        <label for="test_language">{{ _("Sprache") }}</label>
         <select id="test_language" name="language">
-          {% for code, label in LANGUAGE_LABELS.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+          {% for code, label in LANGUAGE_LABELS.items() %}<option value="{{ code }}">{{ _(label) }}</option>{% endfor %}
         </select>
       </div>
-      <button class="btn btn-secondary" type="submit">Test-E-Mail senden</button>
-      <p class="hint">Enthält einen Beispiel-Link, der nicht funktioniert.</p>
+      <button class="btn btn-secondary" type="submit">{{ _("Test-E-Mail senden") }}</button>
+      <p class="hint">{{ _("Enthält einen Beispiel-Link, der nicht funktioniert.") }}</p>
     </form>
     {% endif %}
   </section>
 
   <section class="card" aria-labelledby="h-password">
-    <h2 id="h-password">Passwort ändern</h2>
+    <h2 id="h-password">{{ _("Passwort ändern") }}</h2>
     <form method="post" action="/admin/settings/password" autocomplete="off">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
-        <label for="current_password">Aktuelles Passwort</label>
+        <label for="current_password">{{ _("Aktuelles Passwort") }}</label>
         <input id="current_password" name="current_password" type="password" autocomplete="current-password" required maxlength="256" {{ invalid(error, "current_password") }}>
         {{ field_error(error, "current_password") }}
       </div>
       <div class="field">
-        <label for="new_password">Neues Passwort</label>
+        <label for="new_password">{{ _("Neues Passwort") }}</label>
         <input id="new_password" name="new_password" type="password" autocomplete="new-password" required minlength="12" maxlength="256" {{ invalid(error, "new_password") }}>
-        <p class="hint">Mindestens 12 Zeichen.</p>
+        <p class="hint">{{ _("Mindestens 12 Zeichen.") }}</p>
         {{ field_error(error, "new_password") }}
       </div>
       <div class="field">
-        <label for="new_password_repeat">Neues Passwort wiederholen</label>
+        <label for="new_password_repeat">{{ _("Neues Passwort wiederholen") }}</label>
         <input id="new_password_repeat" name="new_password_repeat" type="password" autocomplete="new-password" required maxlength="256" {{ invalid(error, "new_password_repeat") }}>
         {{ field_error(error, "new_password_repeat") }}
       </div>
-      <button class="btn" type="submit">Passwort ändern</button>
-      <p class="hint">Alle anderen Sitzungen werden dabei beendet.</p>
+      <button class="btn" type="submit">{{ _("Passwort ändern") }}</button>
+      <p class="hint">{{ _("Alle anderen Sitzungen werden dabei beendet.") }}</p>
     </form>
 
-    <h3 class="mt">Zählweise der Downloads</h3>
-    <p class="small muted">Ein Download zählt, sobald von einem Internetanschluss aus eine Datei geladen wird. Fortsetzungen, Teilabrufe (Range) und parallele Segmente vom selben Anschluss für dieselbe Datei zählen nicht erneut, solange zwischen zwei Abrufen höchstens {{ download_window }} Minuten liegen und der Beginn höchstens {{ download_window_max }} Stunden zurückliegt. HEAD-Anfragen zählen nie. Das Limit eines Links gilt über alle Formate zusammen. Als Anschluss gilt das Netz der IP-Adresse (/24 bei IPv4, /56 bei IPv6); gespeichert wird davon nur ein kurzlebiger, nicht umkehrbarer Prüfwert.</p>
+    <h3 class="mt">{{ _("Zählweise der Downloads") }}</h3>
+    <p class="small muted">{{ _("Ein Download zählt, sobald von einem Internetanschluss aus eine Datei geladen wird. Fortsetzungen, Teilabrufe (Range) und parallele Segmente vom selben Anschluss für dieselbe Datei zählen nicht erneut, solange zwischen zwei Abrufen höchstens %(minutes)s Minuten liegen und der Beginn höchstens %(hours)s Stunden zurückliegt. HEAD-Anfragen zählen nie. Das Limit eines Links gilt über alle Formate zusammen. Als Anschluss gilt das Netz der IP-Adresse (/24 bei IPv4, /56 bei IPv6); gespeichert wird davon nur ein kurzlebiger, nicht umkehrbarer Prüfwert.", minutes=download_window, hours=download_window_max) }}</p>
   </section>
 </div>
 
 <section class="card" aria-labelledby="h-keys" id="api-keys">
-  <h2 id="h-keys">API-Schlüssel</h2>
-  <p class="muted small">Für den Zugriff über die <a href="/api/v1/docs">REST-API</a>. Ein Schlüssel wird nur beim Erstellen vollständig angezeigt und nur als Prüfsumme gespeichert.</p>
+  <h2 id="h-keys">{{ _("API-Schlüssel") }}</h2>
+  <p class="muted small">{{ _('Für den Zugriff über die <a href="/api/v1/docs">REST-API</a>. Ein Schlüssel wird nur beim Erstellen vollständig angezeigt und nur als Prüfsumme gespeichert.') | safe }}</p>
   {% if api_keys %}
   <div class="table-wrap">
     <table class="responsive">
-      <thead><tr><th scope="col">Name</th><th scope="col">Kennung</th><th scope="col">Berechtigungen</th><th scope="col">Zuletzt benutzt</th><th scope="col">Status</th><th scope="col">Aktion</th></tr></thead>
+      <thead><tr><th scope="col">{{ _("Name") }}</th><th scope="col">{{ _("Kennung") }}</th><th scope="col">{{ _("Berechtigungen") }}</th><th scope="col">{{ _("Zuletzt benutzt") }}</th><th scope="col">{{ _("Status") }}</th><th scope="col">{{ _("Aktion") }}</th></tr></thead>
       <tbody>
         {% for key in api_keys %}
         <tr>
           <td class="primary">{{ key.name }}</td>
-          <td data-label="Kennung" class="mono small">{{ key.key_prefix }}_…</td>
-          <td data-label="Berechtigungen">{% for scope in key.scopes %}{{ SCOPE_LABELS[scope] }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-          <td data-label="Zuletzt benutzt">{{ key.last_used_at | dt }}</td>
-          <td data-label="Status">{% if key.revoked_at %}<span class="badge badge-revoked">widerrufen</span>{% else %}<span class="badge badge-active">aktiv</span>{% endif %}</td>
-          <td data-label="Aktion">
+          <td data-label="{{ _('Kennung') }}" class="mono small">{{ key.key_prefix }}_…</td>
+          <td data-label="{{ _('Berechtigungen') }}">{% for scope in key.scopes %}{{ _(SCOPE_LABELS[scope]) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+          <td data-label="{{ _('Zuletzt benutzt') }}">{{ key.last_used_at | dt }}</td>
+          <td data-label="{{ _('Status') }}">{% if key.revoked_at %}<span class="badge badge-revoked">{{ _("widerrufen") }}</span>{% else %}<span class="badge badge-active">{{ _("aktiv") }}</span>{% endif %}</td>
+          <td data-label="{{ _('Aktion') }}">
             {% if not key.revoked_at %}
             <form method="post" action="/admin/settings/api-keys/{{ key.id }}/revoke">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <label class="check small"><input type="checkbox" name="confirm" value="1" required> <span>bestätigen</span></label>
-              <button class="btn btn-danger btn-small" type="submit">Widerrufen</button>
+              <label class="check small"><input type="checkbox" name="confirm" value="1" required> <span>{{ _("bestätigen") }}</span></label>
+              <button class="btn btn-danger btn-small" type="submit">{{ _("Widerrufen") }}</button>
             </form>
             {% else %}<span class="muted small">{{ key.revoked_at | dt }}</span>{% endif %}
           </td>
@@ -146,89 +146,89 @@
     </table>
   </div>
   {% else %}
-  <p class="muted">Noch keine API-Schlüssel.</p>
+  <p class="muted">{{ _("Noch keine API-Schlüssel.") }}</p>
   {% endif %}
 
   <form class="mt" method="post" action="/admin/settings/api-keys">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <fieldset>
-      <legend>Neuen Schlüssel erstellen</legend>
+      <legend>{{ _("Neuen Schlüssel erstellen") }}</legend>
       <div class="field">
-        <label for="key-name">Name</label>
-        <input id="key-name" name="name" type="text" required maxlength="100" placeholder="z. B. n8n-Automatisierung" value="{{ values.name or '' }}" {{ invalid(error, "name") }}>
+        <label for="key-name">{{ _("Name") }}</label>
+        <input id="key-name" name="name" type="text" required maxlength="100" placeholder="{{ _('z. B. n8n-Automatisierung') }}" value="{{ values.name or '' }}" {{ invalid(error, "name") }}>
         {{ field_error(error, "name") }}
       </div>
-      <p><strong>Berechtigungen</strong></p>
+      <p><strong>{{ _("Berechtigungen") }}</strong></p>
       {% for scope in scopes %}
-      <label class="check"><input type="checkbox" name="scopes" value="{{ scope }}" {% if scope in (values.scopes or []) %}checked{% endif %}> <span>{{ SCOPE_LABELS[scope] }} <span class="muted mono small">({{ scope }})</span></span></label>
+      <label class="check"><input type="checkbox" name="scopes" value="{{ scope }}" {% if scope in (values.scopes or []) %}checked{% endif %}> <span>{{ _(SCOPE_LABELS[scope]) }} <span class="muted mono small">({{ scope }})</span></span></label>
       {% endfor %}
       {{ field_error(error, "scopes") }}
-      <button class="btn btn-secondary" type="submit">Schlüssel erstellen</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Schlüssel erstellen") }}</button>
     </fieldset>
   </form>
 </section>
 
 <section class="card" aria-labelledby="h-backup" id="backups">
-  <h2 id="h-backup">Backups</h2>
+  <h2 id="h-backup">{{ _("Backups") }}</h2>
   {% if not backup.enabled %}
   <div class="alert alert-warn" role="status">
-    <p><strong>Backups sind nicht aktiv.</strong>
-      {% if not backup.restic_available %}Das Programm restic wurde nicht gefunden.{% endif %}
-      {% if not backup.password_set %}Die Umgebungsvariable <code>BACKUP_PASSWORD</code> ist nicht gesetzt.{% endif %}
+    <p><strong>{{ _("Backups sind nicht aktiv.") }}</strong>
+      {% if not backup.restic_available %}{{ _("Das Programm restic wurde nicht gefunden.") }}{% endif %}
+      {% if not backup.password_set %}{{ _("Die Umgebungsvariable <code>BACKUP_PASSWORD</code> ist nicht gesetzt.") | safe }}{% endif %}
     </p>
   </div>
   {% endif %}
   {% if backup.enabled and not backup.offsite_configured %}
   <div class="alert alert-warn" role="status">
-    <p><strong>Kein externes Backup-Ziel eingerichtet.</strong> Die Sicherungen liegen nur auf diesem Server. Fällt der Server aus, sind auch die Sicherungen verloren. Ein externes Ziel wird über <code>BACKUP_OFFSITE_REPOSITORY</code> und die zugehörigen Zugangsdaten eingerichtet.</p>
+    <p>{{ _("<strong>Kein externes Backup-Ziel eingerichtet.</strong> Die Sicherungen liegen nur auf diesem Server. Fällt der Server aus, sind auch die Sicherungen verloren. Ein externes Ziel wird über <code>BACKUP_OFFSITE_REPOSITORY</code> und die zugehörigen Zugangsdaten eingerichtet.") | safe }}</p>
   </div>
   {% endif %}
   <dl class="facts">
-    <dt>Zeitplan</dt><dd>täglich ab {{ "%02d" | format(backup.hour) }}:00 Uhr ({{ timezone_name }})</dd>
-    <dt>Aufbewahrung</dt><dd>{{ backup.keep.daily }} tägliche, {{ backup.keep.weekly }} wöchentliche, {{ backup.keep.monthly }} monatliche Stände</dd>
-    <dt>Letztes lokales Backup</dt><dd>{% if backup.last_local %}{{ backup.last_local.finished_at | dt }} <span class="muted small mono">({{ backup.last_local.snapshot_id[:8] }})</span>{% else %}noch keines{% endif %}</dd>
-    <dt>Externes Ziel</dt><dd>{% if backup.offsite_configured %}<span class="mono small">{{ backup.offsite_repository }}</span>{% else %}nicht eingerichtet{% endif %}</dd>
-    {% if backup.offsite_configured %}<dt>Letztes externes Backup</dt><dd>{% if backup.last_offsite %}{{ backup.last_offsite.finished_at | dt }}{% else %}noch keines{% endif %}</dd>{% endif %}
+    <dt>{{ _("Zeitplan") }}</dt><dd>{{ _("täglich ab %(time)s Uhr (%(tz)s)", time="%02d" | format(backup.hour) ~ ":00", tz=timezone_name) }}</dd>
+    <dt>{{ _("Aufbewahrung") }}</dt><dd>{{ _("%(daily)s tägliche, %(weekly)s wöchentliche, %(monthly)s monatliche Stände", daily=backup.keep.daily, weekly=backup.keep.weekly, monthly=backup.keep.monthly) }}</dd>
+    <dt>{{ _("Letztes lokales Backup") }}</dt><dd>{% if backup.last_local %}{{ backup.last_local.finished_at | dt }} <span class="muted small mono">({{ backup.last_local.snapshot_id[:8] }})</span>{% else %}{{ _("noch keines") }}{% endif %}</dd>
+    <dt>{{ _("Externes Ziel") }}</dt><dd>{% if backup.offsite_configured %}<span class="mono small">{{ backup.offsite_repository }}</span>{% else %}{{ _("nicht eingerichtet") }}{% endif %}</dd>
+    {% if backup.offsite_configured %}<dt>{{ _("Letztes externes Backup") }}</dt><dd>{% if backup.last_offsite %}{{ backup.last_offsite.finished_at | dt }}{% else %}{{ _("noch keines") }}{% endif %}</dd>{% endif %}
   </dl>
   {% if backup.enabled %}
   <div class="row">
     <form method="post" action="/admin/settings/backup/run">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="btn btn-secondary" type="submit" {% if backup.running %}disabled{% endif %}>Backup jetzt ausführen</button>
+      <button class="btn btn-secondary" type="submit" {% if backup.running %}disabled{% endif %}>{{ _("Backup jetzt ausführen") }}</button>
     </form>
     <form method="post" action="/admin/settings/backup/verify">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="target" value="local">
-      <button class="btn btn-secondary" type="submit">Lokales Backup prüfen</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Lokales Backup prüfen") }}</button>
     </form>
     {% if backup.offsite_configured %}
     <form method="post" action="/admin/settings/backup/verify">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="target" value="offsite">
-      <button class="btn btn-secondary" type="submit">Externes Backup prüfen</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Externes Backup prüfen") }}</button>
     </form>
     {% endif %}
   </div>
-  <p class="hint">Die Prüfung liest alle gesicherten Daten und kann bei vielen Büchern einige Minuten dauern. Die Wiederherstellung erfolgt über die Kommandozeile (<code>ebookctl restore</code>), siehe Dokumentation.</p>
+  <p class="hint">{{ _("Die Prüfung liest alle gesicherten Daten und kann bei vielen Büchern einige Minuten dauern. Die Wiederherstellung erfolgt über die Kommandozeile (<code>ebookctl restore</code>), siehe Dokumentation.") | safe }}</p>
   {% endif %}
   {% if backup_report %}
-  <h3 class="mt">Ergebnis der Prüfung</h3>
+  <h3 class="mt">{{ _("Ergebnis der Prüfung") }}</h3>
   <pre id="backup-report">{{ backup_report }}</pre>
-  <button type="button" class="btn btn-secondary btn-small" data-copy="backup-report">Ergebnis kopieren</button>
+  <button type="button" class="btn btn-secondary btn-small" data-copy="backup-report">{{ _("Ergebnis kopieren") }}</button>
   {% endif %}
   {% if backup.runs %}
-  <h3 class="mt">Letzte Läufe</h3>
+  <h3 class="mt">{{ _("Letzte Läufe") }}</h3>
   <div class="table-wrap">
     <table class="responsive">
-      <thead><tr><th scope="col">Beginn</th><th scope="col">Ziel</th><th scope="col">Auslöser</th><th scope="col">Ergebnis</th><th scope="col">Details</th></tr></thead>
+      <thead><tr><th scope="col">{{ _("Beginn") }}</th><th scope="col">{{ _("Ziel") }}</th><th scope="col">{{ _("Auslöser") }}</th><th scope="col">{{ _("Ergebnis") }}</th><th scope="col">{{ _("Details") }}</th></tr></thead>
       <tbody>
         {% for run in backup.runs %}
         <tr>
           <td class="primary">{{ run.started_at | dt }}</td>
-          <td data-label="Ziel">{{ "extern" if run.target == "offsite" else "lokal" }}</td>
-          <td data-label="Auslöser">{{ {"schedule": "Zeitplan", "manual": "manuell", "cli": "Kommandozeile"}.get(run.trigger, run.trigger) }}</td>
-          <td data-label="Ergebnis">{% if run.status == "ok" %}<span class="badge badge-active">erfolgreich</span>{% elif run.status == "running" %}<span class="badge">läuft</span>{% else %}<span class="badge badge-revoked">fehlgeschlagen</span>{% endif %}</td>
-          <td data-label="Details" class="small">{{ run.detail }}</td>
+          <td data-label="{{ _('Ziel') }}">{{ _("extern") if run.target == "offsite" else _("lokal") }}</td>
+          <td data-label="{{ _('Auslöser') }}">{{ {"schedule": _("Zeitplan"), "manual": _("manuell"), "cli": _("Kommandozeile")}.get(run.trigger, run.trigger) }}</td>
+          <td data-label="{{ _('Ergebnis') }}">{% if run.status == "ok" %}<span class="badge badge-active">{{ _("erfolgreich") }}</span>{% elif run.status == "running" %}<span class="badge">{{ _("läuft") }}</span>{% else %}<span class="badge badge-revoked">{{ _("fehlgeschlagen") }}</span>{% endif %}</td>
+          <td data-label="{{ _('Details') }}" class="small">{{ run.detail }}</td>
         </tr>
         {% endfor %}
       </tbody>

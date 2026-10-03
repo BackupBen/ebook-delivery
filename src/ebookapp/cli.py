@@ -128,9 +128,9 @@ def cmd_gc(args: argparse.Namespace) -> int:
 
 def cmd_openapi(args: argparse.Namespace) -> int:
     """Gibt die OpenAPI-Spezifikation aus. Benötigt weder Konfiguration noch Datenbank."""
-    from .web.api import build_api
+    from .i18n import translate_openapi, untranslated_openapi
 
-    spec = build_api(None).openapi()  # type: ignore[arg-type]
+    spec = translate_openapi(untranslated_openapi())
     print(json.dumps(spec, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

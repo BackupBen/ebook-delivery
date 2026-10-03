@@ -17,9 +17,10 @@ from starlette.datastructures import FormData, UploadFile
 from starlette.responses import FileResponse, RedirectResponse, Response
 from starlette.templating import Jinja2Templates
 
-from .. import __version__
+from .. import __version__, i18n
 from ..db import open_db, parse_iso
 from ..errors import AppError, Forbidden, NotFound, field_error
+from ..i18n import N_, _
 from ..schemas import (
     LANGUAGE_LABELS,
     SCOPE_LABELS,
@@ -58,11 +59,11 @@ templates = Jinja2Templates(directory=str(resources.files("ebookapp") / "templat
 PAGE_SIZE = 50
 
 STATE_LABELS = {
-    "active": "aktiv",
-    "disabled": "deaktiviert",
-    "revoked": "widerrufen",
-    "expired": "abgelaufen",
-    "exhausted": "Limit erreicht",
+    "active": N_("aktiv"),
+    "disabled": N_("deaktiviert"),
+    "revoked": N_("widerrufen"),
+    "expired": N_("abgelaufen"),
+    "exhausted": N_("Limit erreicht"),
 }
 
 
@@ -79,7 +80,8 @@ class LoginRequired(Exception):
 # ---------------------------------------------------------------------------
 
 
-def _filesize(value: int | None, language: str = "de") -> str:
+def _filesize(value: int | None, language: str | None = None) -> str:
+    language = language or i18n.current()
     if value is None:
         return "–"
     size = float(value)
@@ -94,9 +96,10 @@ def _filesize(value: int | None, language: str = "de") -> str:
 
 
 def install_filters(settings_timezone: Any) -> None:
-    def _dt(value: str | None, fmt: str = "%d.%m.%Y %H:%M") -> str:
+    def _dt(value: str | None, fmt: str | None = None) -> str:
         if not value:
             return "–"
+        fmt = fmt or ("%d.%m.%Y %H:%M" if i18n.current() == "de" else "%Y-%m-%d %H:%M")
         try:
             return parse_iso(value).astimezone(settings_timezone).strftime(fmt)
         except ValueError:
@@ -110,6 +113,10 @@ def install_filters(settings_timezone: Any) -> None:
     templates.env.filters["dt_local"] = _dt_local
     templates.env.filters["filesize"] = _filesize
     templates.env.globals["STATE_LABELS"] = STATE_LABELS
+    templates.env.globals["_"] = i18n.gettext
+    templates.env.globals["N_"] = i18n.mark
+    templates.env.globals["ui_lang"] = i18n.current
+    templates.env.globals["UI_LANGUAGE_NAMES"] = i18n.LANGUAGE_NAMES
     templates.env.globals["SCOPE_LABELS"] = SCOPE_LABELS
     templates.env.globals["LANGUAGE_LABELS"] = LANGUAGE_LABELS
     templates.env.globals["app_version"] = __version__
@@ -135,7 +142,9 @@ def render(
         "flash": flash,
         "error": error,
         "request_id": getattr(request.state, "request_id", ""),
-        "now_text": datetime.now(c.settings.timezone).strftime("%d.%m.%Y %H:%M:%S %Z"),
+        "now_text": datetime.now(c.settings.timezone).strftime(
+            "%d.%m.%Y %H:%M:%S %Z" if i18n.current() == "de" else "%Y-%m-%d %H:%M:%S %Z"
+        ),
         "timezone_name": c.settings.timezone_name,
     }
     data.update(context or {})
@@ -183,7 +192,7 @@ async def admin_post(
         token = form_text(form, "csrf_token")
         if not token or not constant_time_equal(token, session["csrf_token"]):
             raise Forbidden(
-                "Das Formular ist abgelaufen oder ungültig. Bitte die Seite neu laden.",
+                _("Das Formular ist abgelaufen oder ungültig. Bitte die Seite neu laden."),
                 code="csrf_token",
             )
         yield AdminPost(session=session, form=form)
@@ -260,7 +269,7 @@ async def login_submit(request: Request) -> Response:
     try:
         check_same_origin(request, settings)
     except Forbidden:
-        return _login_page(request, error="Anfrage abgelehnt.", status_code=403)
+        return _login_page(request, error=_("Anfrage abgelehnt."), status_code=403)
 
     async with request.form(max_files=0, max_fields=10) as form:
         username = form_text(form, "username").strip()[:100]
@@ -271,7 +280,7 @@ async def login_submit(request: Request) -> Response:
     if not token or not cookie or not constant_time_equal(token, cookie):
         return _login_page(
             request,
-            error="Das Anmeldeformular ist abgelaufen. Bitte erneut versuchen.",
+            error=_("Das Anmeldeformular ist abgelaufen. Bitte erneut versuchen."),
             status_code=403,
             username=username,
         )
@@ -286,11 +295,16 @@ async def login_submit(request: Request) -> Response:
         user_key, settings.login_max_failures, window
     )
     if wait:
+        minutes = max(1, (wait + 59) // 60)
         response = _login_page(
             request,
             error=(
-                "Zu viele Anmeldeversuche. Bitte in "
-                f"{max(1, (wait + 59) // 60)} Minuten erneut versuchen."
+                _("Zu viele Anmeldeversuche. Bitte in einer Minute erneut versuchen.")
+                if minutes == 1
+                else _(
+                    "Zu viele Anmeldeversuche. Bitte in %(n)s Minuten erneut versuchen.",
+                    n=minutes,
+                )
             ),
             status_code=429,
             username=username,
@@ -317,7 +331,7 @@ async def login_submit(request: Request) -> Response:
     if session_token is False:
         response = _login_page(
             request,
-            error=(
+            error=_(
                 "Die Anmeldung ist gerade ausgelastet. Bitte in wenigen Sekunden erneut versuchen."
             ),
             status_code=429,
@@ -329,7 +343,7 @@ async def login_submit(request: Request) -> Response:
         auth.log.warning("Fehlgeschlagene Anmeldung von %s", ip)
         return _login_page(
             request,
-            error="Benutzername oder Passwort ist falsch.",
+            error=_("Benutzername oder Passwort ist falsch."),
             status_code=401,
             username=username,
         )
@@ -437,7 +451,7 @@ def book_create(
             {"nav": "books", "values": values},
             error=error_info(exc),
         )
-    flash(conn, post.session, "success", "Buch angelegt. Lade jetzt die Dateien hoch.")
+    flash(conn, post.session, "success", _("Buch angelegt. Lade jetzt die Dateien hoch."))
     return redirect(f"/admin/books/{book['id']}")
 
 
@@ -516,7 +530,7 @@ def book_edit(
         if isinstance(exc, NotFound):
             raise
         return _book_page(request, conn, book_id, error=error_info(exc), values=values)
-    flash(conn, post.session, "success", "Änderungen gespeichert.")
+    flash(conn, post.session, "success", _("Änderungen gespeichert."))
     return redirect(f"/admin/books/{book_id}")
 
 
@@ -532,7 +546,7 @@ def book_cover_upload(
     def action() -> None:
         upload = _upload(post.form, "cover")
         if upload is None:
-            raise field_error("cover", "Bitte ein Bild auswählen.")
+            raise field_error("cover", _("Bitte ein Bild auswählen."))
         books.set_cover(
             conn,
             c.storage,
@@ -543,7 +557,7 @@ def book_cover_upload(
             misc.get_limits(conn, c.settings).bytes_for("cover"),
         )
 
-    return _book_action(request, conn, post, book_id, action, "Cover gespeichert.")
+    return _book_action(request, conn, post, book_id, action, _("Cover gespeichert."))
 
 
 @router.post("/admin/books/{book_id}/cover/delete")
@@ -560,7 +574,7 @@ def book_cover_delete(
         post,
         book_id,
         lambda: books.remove_cover(conn, c.storage, book_id) and None,
-        "Cover entfernt.",
+        _("Cover entfernt."),
     )
 
 
@@ -574,7 +588,7 @@ def book_cover(
     c = ctx(request)
     row = books.get_book_row(conn, book_id)
     if not row["cover_key"] or not c.storage.exists(row["cover_key"]):
-        raise NotFound("Kein Cover vorhanden.")
+        raise NotFound(_("Kein Cover vorhanden."))
     return FileResponse(c.storage.path(row["cover_key"]), media_type=row["cover_mime"])
 
 
@@ -592,9 +606,9 @@ def book_archive(
         post,
         book_id,
         lambda: books.set_archived(conn, book_id, archived) and None,
-        "Buch archiviert. Bestehende Links funktionieren weiter."
+        _("Buch archiviert. Bestehende Links funktionieren weiter.")
         if archived
-        else "Buch wieder aktiv.",
+        else _("Buch wieder aktiv."),
     )
 
 
@@ -623,7 +637,7 @@ def book_delete(
     preview = books.deletion_preview(conn, book_id)
     try:
         if form_text(post.form, "confirm") != "1":
-            raise field_error("confirm", "Bitte bestätige die Löschung mit dem Häkchen.")
+            raise field_error("confirm", _("Bitte bestätige die Löschung mit dem Häkchen."))
         try:
             expected = int(form_text(post.form, "expected_link_count", "-1"))
         except ValueError:
@@ -642,8 +656,13 @@ def book_delete(
         conn,
         post.session,
         "success",
-        f"„{preview['title']}“ wurde gelöscht. {result['links_invalidated']} Links sind "
-        f"damit ungültig, {result['files_deleted']} Dateien wurden entfernt.",
+        _(
+            "„%(title)s“ wurde gelöscht. %(links)s Links sind damit ungültig, "
+            "%(files)s Dateien wurden entfernt.",
+            title=preview["title"],
+            links=result["links_invalidated"],
+            files=result["files_deleted"],
+        ),
     )
     return redirect("/admin/books")
 
@@ -670,7 +689,7 @@ def edition_create(
             }
         )
         edition = books.create_edition(conn, book_id, data)
-        return f"Entwurf für Ausgabe {edition['number']} angelegt."
+        return _("Entwurf für Ausgabe %(n)s angelegt.", n=edition["number"])
 
     return _book_action(request, conn, post, book_id, action, None)
 
@@ -689,7 +708,7 @@ def edition_upload(
         limits = misc.get_limits(conn, c.settings)
         uploads = {fmt: upload for fmt in ("pdf", "epub") if (upload := _upload(post.form, fmt))}
         if not uploads:
-            raise field_error("pdf", "Bitte mindestens eine Datei auswählen.")
+            raise field_error("pdf", _("Bitte mindestens eine Datei auswählen."))
         books.upload_files(
             conn,
             c.storage,
@@ -702,7 +721,9 @@ def edition_upload(
             epub_limits=_epub_limits(c),
         )
         uploaded = [fmt.upper() for fmt in uploads]
-        return f"{' und '.join(uploaded)} gespeichert."
+        if len(uploaded) == 2:
+            return _("%(a)s und %(b)s gespeichert.", a=uploaded[0], b=uploaded[1])
+        return _("%(fmt)s gespeichert.", fmt=uploaded[0])
 
     return _book_action(request, conn, post, book_id, action, None)
 
@@ -723,7 +744,7 @@ def edition_file_delete(
         post,
         book_id,
         lambda: books.delete_file(conn, c.storage, book_id, edition_id, fmt) and None,
-        f"{fmt.upper()}-Datei aus dem Entwurf entfernt.",
+        _("%(fmt)s-Datei aus dem Entwurf entfernt.", fmt=fmt.upper()),
     )
 
 
@@ -744,7 +765,7 @@ def edition_file_download(
         "SELECT * FROM edition_files WHERE edition_id = ? AND format = ?", (edition_id, fmt)
     ).fetchone()
     if row is None or not c.storage.exists(row["storage_key"]):
-        raise NotFound("Diese Datei gibt es nicht.")
+        raise NotFound(_("Diese Datei gibt es nicht."))
     return FileResponse(
         c.storage.path(row["storage_key"]),
         media_type=MEDIA_TYPES[fmt],
@@ -766,15 +787,20 @@ def edition_publish(
             {"existing_links": form_text(post.form, "existing_links") or None}
         )
         result = books.publish_edition(conn, book_id, edition_id, data)
-        text = f"Ausgabe {result['edition']['number']} ist veröffentlicht."
+        text = _("Ausgabe %(n)s ist veröffentlicht.", n=result["edition"]["number"])
         if result["links_migrated"]:
-            text += f" {result['links_migrated']} Links wurden auf die neue Ausgabe umgestellt."
+            text += " " + _(
+                "%(n)s Links wurden auf die neue Ausgabe umgestellt.", n=result["links_migrated"]
+            )
         if result["links_kept"]:
-            text += f" {result['links_kept']} Links bleiben an ihrer bisherigen Ausgabe."
+            text += " " + _(
+                "%(n)s Links bleiben an ihrer bisherigen Ausgabe.", n=result["links_kept"]
+            )
         if result["links_without_matching_format"]:
-            text += (
-                f" Davon wurden {result['links_without_matching_format']} nicht umgestellt, "
-                "weil die neue Ausgabe keines ihrer freigegebenen Formate enthält."
+            text += " " + _(
+                "Davon wurden %(n)s nicht umgestellt, "
+                "weil die neue Ausgabe keines ihrer freigegebenen Formate enthält.",
+                n=result["links_without_matching_format"],
             )
         return text
 
@@ -793,10 +819,10 @@ def edition_delete(
 
     def action() -> None:
         if form_text(post.form, "confirm") != "1":
-            raise field_error("confirm", "Bitte bestätige die Löschung mit dem Häkchen.")
+            raise field_error("confirm", _("Bitte bestätige die Löschung mit dem Häkchen."))
         books.delete_edition(conn, c.storage, book_id, edition_id)
 
-    return _book_action(request, conn, post, book_id, action, "Ausgabe gelöscht.")
+    return _book_action(request, conn, post, book_id, action, _("Ausgabe gelöscht."))
 
 
 @router.post("/admin/books/{book_id}/editions/{edition_id}/migrate-links")
@@ -809,13 +835,14 @@ def edition_migrate_links(
 ) -> Response:
     def action() -> str:
         if form_text(post.form, "confirm") != "1":
-            raise field_error("confirm", "Bitte bestätige die Umstellung mit dem Häkchen.")
+            raise field_error("confirm", _("Bitte bestätige die Umstellung mit dem Häkchen."))
         result = books.migrate_links(conn, book_id, edition_id)
-        text = f"{result['links_migrated']} Links wurden auf diese Ausgabe umgestellt."
+        text = _("%(n)s Links wurden auf diese Ausgabe umgestellt.", n=result["links_migrated"])
         if result["links_without_matching_format"]:
-            text += (
-                f" {result['links_without_matching_format']} Links bleiben an ihrer Ausgabe, "
-                "weil diese Ausgabe keines ihrer freigegebenen Formate enthält."
+            text += " " + _(
+                "%(n)s Links bleiben an ihrer Ausgabe, "
+                "weil diese Ausgabe keines ihrer freigegebenen Formate enthält.",
+                n=result["links_without_matching_format"],
             )
         return text
 
@@ -835,7 +862,7 @@ def _local_datetime(c: AppContext, value: str) -> datetime | None:
     try:
         return datetime.fromisoformat(value).replace(tzinfo=c.settings.timezone)
     except ValueError as exc:
-        raise field_error("expires_at", "Ungültiges Ablaufdatum.") from exc
+        raise field_error("expires_at", _("Ungültiges Ablaufdatum.")) from exc
 
 
 def _validity_text(c: AppContext, link: dict[str, Any], language: str = "de") -> str:
@@ -1072,7 +1099,7 @@ def link_edit(
             payload["expires_at"] = expires
         links.update_link(conn, link_id, LinkUpdate.model_validate(payload))
 
-    return _link_action(request, conn, post, link_id, action, "Änderungen gespeichert.")
+    return _link_action(request, conn, post, link_id, action, _("Änderungen gespeichert."))
 
 
 @router.post("/admin/links/{link_id}/status")
@@ -1089,7 +1116,7 @@ def link_status(
         post,
         link_id,
         lambda: links.update_link(conn, link_id, LinkUpdate(status=target)),
-        "Link deaktiviert." if target == "disabled" else "Link wieder aktiv.",
+        _("Link deaktiviert.") if target == "disabled" else _("Link wieder aktiv."),
     )
 
 
@@ -1102,7 +1129,7 @@ def link_revoke(
 ) -> Response:
     def action() -> None:
         if form_text(post.form, "confirm") != "1":
-            raise field_error("confirm", "Bitte bestätige den Widerruf mit dem Häkchen.")
+            raise field_error("confirm", _("Bitte bestätige den Widerruf mit dem Häkchen."))
         links.revoke_link(conn, link_id)
 
     return _link_action(
@@ -1111,7 +1138,7 @@ def link_revoke(
         post,
         link_id,
         action,
-        "Link widerrufen. Er kann nicht mehr verwendet werden.",
+        _("Link widerrufen. Er kann nicht mehr verwendet werden."),
     )
 
 
@@ -1124,11 +1151,17 @@ def link_delete(
 ) -> Response:
     def action() -> None:
         if form_text(post.form, "confirm") != "1":
-            raise field_error("confirm", "Bitte bestätige die Löschung mit dem Häkchen.")
+            raise field_error("confirm", _("Bitte bestätige die Löschung mit dem Häkchen."))
         links.delete_link(conn, link_id)
 
     return _link_action(
-        request, conn, post, link_id, action, "Link endgültig gelöscht.", target="/admin/links"
+        request,
+        conn,
+        post,
+        link_id,
+        action,
+        _("Link endgültig gelöscht."),
+        target="/admin/links",
     )
 
 
@@ -1206,7 +1239,7 @@ def settings_save(
         misc.update_settings(conn, c.settings, SettingsUpdate.model_validate(values))
     except (AppError, ValidationError) as exc:
         return _settings_page(request, conn, error=error_info(exc), values=values)
-    flash(conn, post.session, "success", "Einstellungen gespeichert.")
+    flash(conn, post.session, "success", _("Einstellungen gespeichert."))
     return redirect("/admin/settings")
 
 
@@ -1226,7 +1259,7 @@ def settings_password(
         auth.change_password(conn, post.session["user_id"], data, post.session["token"])
     except (AppError, ValidationError) as exc:
         return _settings_page(request, conn, error=error_info(exc))
-    flash(conn, post.session, "success", "Passwort geändert. Andere Sitzungen wurden beendet.")
+    flash(conn, post.session, "success", _("Passwort geändert. Andere Sitzungen wurden beendet."))
     return redirect("/admin/settings")
 
 
@@ -1261,11 +1294,11 @@ def api_key_revoke(
 ) -> Response:
     try:
         if form_text(post.form, "confirm") != "1":
-            raise field_error("confirm", "Bitte bestätige den Widerruf mit dem Häkchen.")
+            raise field_error("confirm", _("Bitte bestätige den Widerruf mit dem Häkchen."))
         auth.revoke_api_key(conn, key_id)
     except AppError as exc:
         return _settings_page(request, conn, error=error_info(exc))
-    flash(conn, post.session, "success", "API-Schlüssel widerrufen.")
+    flash(conn, post.session, "success", _("API-Schlüssel widerrufen."))
     return redirect("/admin/settings")
 
 
@@ -1287,13 +1320,13 @@ def backup_run(
             request,
             conn,
             error=ErrorInfo(
-                message=f"Backup fehlgeschlagen. {text}",
+                message=_("Backup fehlgeschlagen. %(details)s", details=text),
                 code="backup_failed",
                 fields=[],
                 status_code=500,
             ),
         )
-    flash(conn, post.session, "success", "Backup abgeschlossen.")
+    flash(conn, post.session, "success", _("Backup abgeschlossen."))
     return redirect("/admin/settings")
 
 
@@ -1391,13 +1424,15 @@ def _order_action(
     if result == "pending":
         c.mailer.wake()
         message = (
-            "Die E-Mail wird versendet."
+            _("Die E-Mail wird versendet.")
             if c.settings.mail_configured
-            else "Der Link ist bereit. Die E-Mail wird versendet, sobald der Versand "
-            "eingerichtet ist."
+            else _(
+                "Der Link ist bereit. Die E-Mail wird versendet, sobald der Versand "
+                "eingerichtet ist."
+            )
         )
     else:
-        message = f"Status: {orders.STATUS_LABELS.get(result, result)}."
+        message = _("Status: %(s)s.", s=_(orders.STATUS_LABELS.get(result, result)))
     flash(conn, post.session, "success", message)
     return redirect(f"/admin/orders/{order_id}")
 
@@ -1493,7 +1528,7 @@ def settings_mail_test(
             request,
             conn,
             error=ErrorInfo(
-                message=f"Test-E-Mail nicht versendet. {exc}",
+                message=_("Test-E-Mail nicht versendet. %(error)s", error=exc),
                 code="mail_failed",
                 fields=[],
                 status_code=502,
@@ -1501,5 +1536,41 @@ def settings_mail_test(
         )
     except (AppError, ValidationError) as exc:
         return _settings_page(request, conn, error=error_info(exc))
-    flash(conn, post.session, "success", f"Test-E-Mail an {address} versendet.")
+    flash(
+        conn,
+        post.session,
+        "success",
+        _("Test-E-Mail an %(address)s versendet.", address=address),
+    )
     return redirect("/admin/settings#versand")
+
+
+# ---------------------------------------------------------------------------
+# Sprache der Verwaltung
+# ---------------------------------------------------------------------------
+
+
+@router.get("/admin/language/{language}")
+def set_ui_language(request: Request, language: str) -> Response:
+    """Setzt die Sprache dieses Browsers. Nur ein Präferenz-Cookie, daher ohne Anmeldung."""
+    c = ctx(request)
+    target = request.query_params.get("next", "")
+    # Nur Pfade dieser App, keine fremden Ziele (offene Weiterleitung).
+    if (
+        not target.startswith(("/admin", "/api/v1/docs"))
+        or target.startswith("//")
+        or "\\" in target
+        or any(ch in target for ch in "\r\n")
+    ):
+        target = "/admin/books"
+    response = RedirectResponse(target, status_code=303)
+    response.set_cookie(
+        i18n.COOKIE_NAME,
+        i18n.normalize(language),
+        max_age=365 * 24 * 3600,
+        path="/",
+        secure=c.settings.cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
+    return response

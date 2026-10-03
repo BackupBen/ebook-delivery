@@ -13,7 +13,9 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from .. import i18n
 from ..config import Settings
+from ..i18n import _
 from ..logging_setup import redact_path
 
 log = logging.getLogger("ebookapp.access")
@@ -37,7 +39,7 @@ CSP_FILE = "default-src 'none'; sandbox; frame-ancestors 'none'"
 
 class BodyTooLarge(HTTPException):
     def __init__(self) -> None:
-        super().__init__(status_code=413, detail="Die Anfrage ist zu groß.")
+        super().__init__(status_code=413, detail=_("Die Anfrage ist zu groß."))
 
 
 class CoreMiddleware:
@@ -56,6 +58,8 @@ class CoreMiddleware:
         path: str = scope["path"]
         method: str = scope["method"]
         headers = Headers(scope=scope)
+        # Sprache der Verwaltung und der API-Meldungen für diese Anfrage.
+        i18n.set_language(i18n.from_cookie_header(headers.get("cookie", "")))
         started = time.perf_counter()
         state: dict[str, Any] = {"status": 500, "started": False, "completed": False}
         is_api = path.startswith("/api/")
@@ -120,7 +124,7 @@ class CoreMiddleware:
                 host = headers.get("host", "").lower()
                 hostname = host.rsplit(":", 1)[0] if not host.endswith("]") else host
                 if hostname not in settings.allowed_hosts:
-                    await respond(400, "invalid_host", "Unbekannter Hostname.")
+                    await respond(400, "invalid_host", _("Unbekannter Hostname."))
                     return
 
             # 2. Wartungsmodus während einer Wiederherstellung.
@@ -128,7 +132,7 @@ class CoreMiddleware:
                 await respond(
                     503,
                     "maintenance",
-                    "Wartungsarbeiten. Bitte in wenigen Minuten erneut versuchen.",
+                    _("Wartungsarbeiten. Bitte in wenigen Minuten erneut versuchen."),
                     {"Retry-After": "60"},
                 )
                 return
@@ -145,13 +149,13 @@ class CoreMiddleware:
                 try:
                     too_large = int(declared) > limit
                 except ValueError:
-                    await respond(400, "bad_request", "Ungültige Content-Length.")
+                    await respond(400, "bad_request", _("Ungültige Content-Length."))
                     return
                 if too_large:
                     await respond(
                         413,
                         "payload_too_large",
-                        "Die Anfrage ist zu groß.",
+                        _("Die Anfrage ist zu groß."),
                         {"Connection": "close"},
                     )
                     return
@@ -171,7 +175,7 @@ class CoreMiddleware:
         except Exception as exc:
             if isinstance(exc, BodyTooLarge):
                 if not state["started"]:
-                    await respond(413, "payload_too_large", "Die Anfrage ist zu groß.")
+                    await respond(413, "payload_too_large", _("Die Anfrage ist zu groß."))
             else:
                 # Der Traceback enthält keine URL; der Pfad wird bereinigt protokolliert.
                 error_log.exception(
@@ -181,7 +185,7 @@ class CoreMiddleware:
                     await respond(
                         500,
                         "internal_error",
-                        "Unerwarteter Serverfehler. Bitte die Fehler-ID angeben.",
+                        _("Unerwarteter Serverfehler. Bitte die Fehler-ID angeben."),
                     )
                 elif not state["completed"]:
                     # Die Antwort wurde mitten in der Übertragung abgebrochen.
@@ -208,14 +212,16 @@ class CoreMiddleware:
 
 
 def _plain_page(status: int, message: str, request_id: str) -> str:
+    title = html.escape(_("Fehler %(code)s", code=status))
+    error_id = html.escape(_("Fehler-ID"))
     return (
-        '<!doctype html><html lang="de"><head><meta charset="utf-8">'
+        f'<!doctype html><html lang="{i18n.current()}"><head><meta charset="utf-8">'
         '<meta name="robots" content="noindex, nofollow">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        f"<title>Fehler {status}</title>"
+        f"<title>{title}</title>"
         '<link rel="stylesheet" href="/static/app.css"></head>'
         '<body><main class="narrow"><div class="card">'
-        f"<h1>Fehler {status}</h1><p>{html.escape(message)}</p>"
-        f'<p class="muted">Fehler-ID: <code>{html.escape(request_id)}</code></p>'
+        f"<h1>{title}</h1><p>{html.escape(message)}</p>"
+        f'<p class="muted">{error_id}: <code>{html.escape(request_id)}</code></p>'
         "</div></main></body></html>"
     )

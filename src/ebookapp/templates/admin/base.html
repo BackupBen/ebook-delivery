@@ -1,35 +1,40 @@
 <!doctype html>
-<html lang="de">
+<html lang="{{ ui_lang() }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow, noarchive">
-  <title>{% block title %}Verwaltung{% endblock %} · E-Book-Auslieferung</title>
+  <title>{% block title %}{{ _("Verwaltung") }}{% endblock %} · {{ _("E-Book-Auslieferung") }}</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+  <a class="skip-link" href="#inhalt">{{ _("Zum Inhalt springen") }}</a>
+  {% set other_lang = "de" if ui_lang() == "en" else "en" %}
   {% if session %}
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="/admin/books">E-Book-Auslieferung</a>
-      <nav aria-label="Hauptnavigation">
+      <a class="brand" href="/admin/books">{{ _("E-Book-Auslieferung") }}</a>
+      <nav aria-label="{{ _('Hauptnavigation') }}">
         <ul class="nav">
-          <li><a href="/admin/books" {% if nav == "books" %}aria-current="page"{% endif %}>Bücher</a></li>
-          <li><a href="/admin/links" {% if nav == "links" %}aria-current="page"{% endif %}>Downloadlinks</a></li>
-          <li><a href="/admin/orders" {% if nav == "orders" %}aria-current="page"{% endif %}>Bestellungen</a></li>
-          <li><a href="/admin/settings" {% if nav == "settings" %}aria-current="page"{% endif %}>Einstellungen &amp; Backups</a></li>
+          <li><a href="/admin/books" {% if nav == "books" %}aria-current="page"{% endif %}>{{ _("Bücher") }}</a></li>
+          <li><a href="/admin/links" {% if nav == "links" %}aria-current="page"{% endif %}>{{ _("Downloadlinks") }}</a></li>
+          <li><a href="/admin/orders" {% if nav == "orders" %}aria-current="page"{% endif %}>{{ _("Bestellungen") }}</a></li>
+          <li><a href="/admin/settings" {% if nav == "settings" %}aria-current="page"{% endif %}>{{ _("Einstellungen & Backups") }}</a></li>
           <li><a href="/api/v1/docs" {% if nav == "api" %}aria-current="page"{% endif %}>API</a></li>
         </ul>
       </nav>
+      <a class="lang-switch" href="/admin/language/{{ other_lang }}?next={{ request.url.path | urlencode }}" hreflang="{{ other_lang }}" lang="{{ other_lang }}">{{ UI_LANGUAGE_NAMES[other_lang] }}</a>
       <form method="post" action="/admin/logout" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button class="btn btn-secondary btn-small" type="submit">Abmelden ({{ session.username }})</button>
+        <button class="btn btn-secondary btn-small" type="submit">{{ _("Abmelden (%(user)s)", user=session.username) }}</button>
       </form>
     </div>
   </header>
   {% endif %}
   <main id="inhalt" class="{% block main_class %}{% endblock %}">
+    {% if not session %}
+    <p class="lang-switch-standalone"><a class="lang-switch" href="/admin/language/{{ other_lang }}?next={{ request.url.path | urlencode }}" hreflang="{{ other_lang }}" lang="{{ other_lang }}">{{ UI_LANGUAGE_NAMES[other_lang] }}</a></p>
+    {% endif %}
     {% from "admin/_macros.html" import error_box %}
     {{ error_box(error, request_id, now_text) }}
     {% for item in flash %}

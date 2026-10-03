@@ -20,6 +20,7 @@ from typing import BinaryIO
 from PIL import Image, UnidentifiedImageError
 
 from .errors import Invalid, field_error
+from .i18n import _
 
 FORMATS = ("pdf", "epub")
 
@@ -91,29 +92,36 @@ def check_declared(kind: str, filename: str | None, content_type: str | None, fi
     if not lower.endswith(extensions):
         raise field_error(
             field,
-            f"Die Datei muss die Endung {' oder '.join(extensions)} haben.",
+            _(
+                "Die Datei muss die Endung %(extensions)s haben.",
+                extensions=_(" oder ").join(extensions),
+            ),
         )
     declared = (content_type or "").split(";")[0].strip().lower()
     if declared and declared not in DECLARED_TYPES[kind]:
         raise field_error(
             field,
-            f"Der angegebene Dateityp „{declared}“ passt nicht zu {kind.upper()}.",
+            _(
+                "Der angegebene Dateityp „%(type)s“ passt nicht zu %(kind)s.",
+                type=declared,
+                kind=kind.upper(),
+            ),
         )
 
 
 def validate_pdf(path: Path, field: str = "pdf") -> None:
     size = path.stat().st_size
     if size < 64:
-        raise field_error(field, "Die Datei ist zu klein, um ein gültiges PDF zu sein.")
+        raise field_error(field, _("Die Datei ist zu klein, um ein gültiges PDF zu sein."))
     with open(path, "rb") as handle:
         head = handle.read(16)
         handle.seek(max(0, size - 2048))
         tail = handle.read()
     if not PDF_HEADER.match(head):
-        raise field_error(field, "Die Datei ist kein PDF (Kennung %PDF- fehlt am Dateianfang).")
+        raise field_error(field, _("Die Datei ist kein PDF (Kennung %PDF- fehlt am Dateianfang)."))
     if b"%%EOF" not in tail:
         raise field_error(
-            field, "Das PDF ist unvollständig oder beschädigt (Endmarke %%EOF fehlt)."
+            field, _("Das PDF ist unvollständig oder beschädigt (Endmarke %%EOF fehlt).")
         )
 
 
@@ -123,7 +131,7 @@ def validate_epub(path: Path, limits: EpubLimits, field: str = "epub") -> None:
 
     with open(path, "rb") as handle:
         if handle.read(4) != b"PK\x03\x04":
-            raise fail("Die Datei ist kein EPUB (kein ZIP-Archiv).")
+            raise fail(_("Die Datei ist kein EPUB (kein ZIP-Archiv)."))
         # Das Ende des Archivs nennt Anzahl und Größe der Verzeichniseinträge. Beides wird
         # geprüft, bevor das Verzeichnis überhaupt eingelesen wird.
         handle.seek(0, 2)
@@ -132,24 +140,33 @@ def validate_epub(path: Path, limits: EpubLimits, field: str = "epub") -> None:
         tail = handle.read()
     index = tail.rfind(b"PK\x05\x06")
     if index < 0 or len(tail) - index < 22:
-        raise fail("Die Datei ist kein gültiges EPUB (ZIP-Archiv beschädigt).")
+        raise fail(_("Die Datei ist kein gültiges EPUB (ZIP-Archiv beschädigt)."))
     total_entries, directory_size = struct.unpack("<HI", tail[index + 10 : index + 16])
     if total_entries > limits.max_entries or total_entries == 0xFFFF:
-        raise fail(f"Das EPUB enthält zu viele Einträge (erlaubt {limits.max_entries}).")
+        raise fail(
+            _(
+                "Das EPUB enthält zu viele Einträge (erlaubt %(max)s).",
+                max=limits.max_entries,
+            )
+        )
     if directory_size > max(1024 * 1024, limits.max_entries * 512):
-        raise fail("Das EPUB enthält ein ungewöhnlich großes Inhaltsverzeichnis.")
+        raise fail(_("Das EPUB enthält ein ungewöhnlich großes Inhaltsverzeichnis."))
     try:
         archive = zipfile.ZipFile(path)
     except (zipfile.BadZipFile, zipfile.LargeZipFile, OSError, ValueError) as exc:
-        raise fail("Die Datei ist kein gültiges EPUB (ZIP-Archiv beschädigt).") from exc
+        raise fail(_("Die Datei ist kein gültiges EPUB (ZIP-Archiv beschädigt).")) from exc
 
     with archive:
         infos = archive.infolist()
         if not infos:
-            raise fail("Das EPUB ist leer.")
+            raise fail(_("Das EPUB ist leer."))
         if len(infos) > limits.max_entries:
             raise fail(
-                f"Das EPUB enthält zu viele Einträge ({len(infos)}, erlaubt {limits.max_entries})."
+                _(
+                    "Das EPUB enthält zu viele Einträge (%(count)s, erlaubt %(max)s).",
+                    count=len(infos),
+                    max=limits.max_entries,
+                )
             )
 
         names: set[str] = set()
@@ -167,40 +184,42 @@ def validate_epub(path: Path, limits: EpubLimits, field: str = "epub") -> None:
                 or ".." in parts
                 or (len(name) > 1 and name[1] == ":")
             ):
-                raise fail("Das EPUB enthält unzulässige Pfade.")
+                raise fail(_("Das EPUB enthält unzulässige Pfade."))
             if name in names:
-                raise fail("Das EPUB enthält doppelte Einträge.")
+                raise fail(_("Das EPUB enthält doppelte Einträge."))
             names.add(name)
             if info.flag_bits & 0x1:
-                raise fail("Das EPUB enthält verschlüsselte ZIP-Einträge.")
+                raise fail(_("Das EPUB enthält verschlüsselte ZIP-Einträge."))
             if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
-                raise fail("Das EPUB verwendet ein nicht unterstütztes Kompressionsverfahren.")
+                raise fail(_("Das EPUB verwendet ein nicht unterstütztes Kompressionsverfahren."))
             declared_total += info.file_size
             compressed_total += info.compress_size
             if declared_total > limits.max_uncompressed_bytes:
-                raise fail("Das EPUB ist entpackt zu groß.")
+                raise fail(_("Das EPUB ist entpackt zu groß."))
             if info.file_size > 1024 * 1024 and info.file_size > limits.max_ratio * max(
                 info.compress_size, 1
             ):
-                raise fail("Das EPUB hat ein auffälliges Kompressionsverhältnis (ZIP-Bomb-Schutz).")
+                raise fail(
+                    _("Das EPUB hat ein auffälliges Kompressionsverhältnis (ZIP-Bomb-Schutz).")
+                )
 
         if declared_total > limits.max_ratio * max(compressed_total, 1) and declared_total > (
             1024 * 1024
         ):
-            raise fail("Das EPUB hat ein auffälliges Kompressionsverhältnis (ZIP-Bomb-Schutz).")
+            raise fail(_("Das EPUB hat ein auffälliges Kompressionsverhältnis (ZIP-Bomb-Schutz)."))
 
         # Überlappende Einträge sind das Kennzeichen nicht-rekursiver ZIP-Bombs.
         ordered = sorted(infos, key=lambda item: item.header_offset)
         for previous, current in itertools.pairwise(ordered):
             minimum_end = previous.header_offset + 30 + previous.compress_size
             if current.header_offset < minimum_end:
-                raise fail("Das EPUB enthält überlappende Einträge (ZIP-Bomb-Schutz).")
+                raise fail(_("Das EPUB enthält überlappende Einträge (ZIP-Bomb-Schutz)."))
 
         first = infos[0]
         if first.filename != "mimetype" or first.compress_type != zipfile.ZIP_STORED:
-            raise fail("Die Datei ist kein EPUB (Eintrag „mimetype“ fehlt am Archivanfang).")
+            raise fail(_("Die Datei ist kein EPUB (Eintrag „mimetype“ fehlt am Archivanfang)."))
         if first.file_size > 64:
-            raise fail("Die Datei ist kein EPUB (Eintrag „mimetype“ ist ungültig).")
+            raise fail(_("Die Datei ist kein EPUB (Eintrag „mimetype“ ist ungültig)."))
 
         # Tatsächlich entpacken und mitzählen: Die Größenangaben im Archiv können gefälscht
         # sein. Gelesen wird in kleinen Blöcken und nie über die Obergrenze hinaus.
@@ -220,33 +239,33 @@ def validate_epub(path: Path, limits: EpubLimits, field: str = "epub") -> None:
                             break
                         actual_total += len(chunk)
                         if actual_total > limits.max_uncompressed_bytes:
-                            raise fail("Das EPUB ist entpackt zu groß (ZIP-Bomb-Schutz).")
+                            raise fail(_("Das EPUB ist entpackt zu groß (ZIP-Bomb-Schutz)."))
                         if keep:
                             buffer.write(chunk)
                             if buffer.tell() > CONTAINER_MAX_BYTES:
-                                raise fail("Das EPUB enthält ungewöhnlich große Steuerdateien.")
+                                raise fail(_("Das EPUB enthält ungewöhnlich große Steuerdateien."))
                     if info.filename == "mimetype":
                         mimetype = buffer.getvalue()
                     elif info.filename == "META-INF/container.xml":
                         container = buffer.getvalue()
         except (zipfile.BadZipFile, zlib.error, EOFError, OSError, RuntimeError) as exc:
-            raise fail("Das EPUB ist beschädigt (Einträge lassen sich nicht lesen).") from exc
+            raise fail(_("Das EPUB ist beschädigt (Einträge lassen sich nicht lesen).")) from exc
 
         if mimetype.strip() != b"application/epub+zip":
-            raise fail("Die Datei ist kein EPUB (falscher Inhalt im Eintrag „mimetype“).")
+            raise fail(_("Die Datei ist kein EPUB (falscher Inhalt im Eintrag „mimetype“)."))
         if not container:
-            raise fail("Das EPUB ist unvollständig (META-INF/container.xml fehlt).")
+            raise fail(_("Das EPUB ist unvollständig (META-INF/container.xml fehlt)."))
         match = ROOTFILE.search(container)
         if not match:
-            raise fail("Das EPUB ist unvollständig (kein Verweis auf die Paketdatei).")
+            raise fail(_("Das EPUB ist unvollständig (kein Verweis auf die Paketdatei)."))
         try:
             rootfile = match.group(1).decode("utf-8")
         except UnicodeDecodeError as exc:
             raise fail(
-                "Das EPUB ist unvollständig (ungültiger Verweis auf die Paketdatei)."
+                _("Das EPUB ist unvollständig (ungültiger Verweis auf die Paketdatei).")
             ) from exc
         if rootfile not in names:
-            raise fail("Das EPUB ist unvollständig (Paketdatei fehlt).")
+            raise fail(_("Das EPUB ist unvollständig (Paketdatei fehlt)."))
 
 
 def process_cover(source: BinaryIO, max_bytes: int, field: str = "cover") -> tuple[bytes, str, str]:
@@ -257,16 +276,16 @@ def process_cover(source: BinaryIO, max_bytes: int, field: str = "cover") -> tup
     """
     data = source.read(max_bytes + 1)
     if len(data) > max_bytes:
-        raise field_error(field, "Das Cover ist zu groß.")
+        raise field_error(field, _("Das Cover ist zu groß."))
     if not data:
-        raise field_error(field, "Das Cover ist leer.")
+        raise field_error(field, _("Das Cover ist leer."))
     try:
         with Image.open(io.BytesIO(data), formats=COVER_FORMATS) as probe:
             image_format = probe.format
             if image_format not in COVER_FORMATS:
-                raise field_error(field, "Das Cover muss ein JPEG-, PNG- oder WebP-Bild sein.")
+                raise field_error(field, _("Das Cover muss ein JPEG-, PNG- oder WebP-Bild sein."))
             if probe.width * probe.height > COVER_MAX_PIXELS:
-                raise field_error(field, "Das Cover hat zu viele Bildpunkte.")
+                raise field_error(field, _("Das Cover hat zu viele Bildpunkte."))
             probe.verify()
         with Image.open(io.BytesIO(data), formats=COVER_FORMATS) as image:
             image.load()
@@ -291,4 +310,4 @@ def process_cover(source: BinaryIO, max_bytes: int, field: str = "cover") -> tup
         SyntaxError,
         ValueError,
     ) as exc:
-        raise field_error(field, "Das Cover ist kein gültiges Bild.") from exc
+        raise field_error(field, _("Das Cover ist kein gültiges Bild.")) from exc

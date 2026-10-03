@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, Response
 
 from ..db import open_db
+from ..i18n import _
 from ..security import rate_key
 from ..services import orders
 from .common import client_ip, ctx
@@ -27,7 +28,7 @@ async def whop_webhook(request: Request) -> Response:
     )
     if wait:
         return JSONResponse(
-            {"error": {"code": "rate_limited", "message": "Zu viele Anfragen."}},
+            {"error": {"code": "rate_limited", "message": _("Zu viele Anfragen.")}},
             status_code=429,
             headers={"Retry-After": str(wait)},
         )

@@ -1,32 +1,32 @@
 {% extends "admin/base.html" %}
 {% from "admin/_macros.html" import field_error, invalid, state_badge %}
-{% block title %}Downloadlink{% endblock %}
+{% block title %}{{ _("Downloadlink") }}{% endblock %}
 {% block content %}
-<p class="breadcrumb"><a href="/admin/links">Downloadlinks</a> › {{ link.label or "Ohne Bezeichnung" }}</p>
+<p class="breadcrumb"><a href="/admin/links">{{ _("Downloadlinks") }}</a> › {{ link.label or _("Ohne Bezeichnung") }}</p>
 <div class="page-head">
-  <h1>{{ link.label or "Ohne Bezeichnung" }} {{ state_badge(link.state) }}</h1>
+  <h1>{{ link.label or _("Ohne Bezeichnung") }} {{ state_badge(link.state) }}</h1>
 </div>
 
 <div class="grid-2">
   <section class="card" aria-labelledby="h-facts">
-    <h2 id="h-facts">Übersicht</h2>
+    <h2 id="h-facts">{{ _("Übersicht") }}</h2>
     <dl class="facts">
-      <dt>Buch</dt><dd><a href="/admin/books/{{ link.book_id }}">{{ link.book_title }}</a></dd>
-      <dt>Ausgabe</dt><dd>Nr. {{ link.edition_number }}{% if book.current_edition and book.current_edition.id != link.edition_id %} <span class="muted">(aktuell ist Nr. {{ book.current_edition.number }})</span>{% endif %}</dd>
-      <dt>Formate</dt><dd>{{ link.formats | join(", ") | upper }}</dd>
-      <dt>Downloads</dt><dd>{{ link.download_count }}{% if link.max_downloads %} von {{ link.max_downloads }}{% else %} (unbegrenzt){% endif %}</dd>
-      <dt>Letzter Download</dt><dd>{{ link.last_download_at | dt }}</dd>
-      <dt>Gültig bis</dt><dd>{{ link.expires_at | dt if link.expires_at else "dauerhaft" }}</dd>
-      <dt>Erstellt</dt><dd>{{ link.created_at | dt }}</dd>
-      {% if link.revoked_at %}<dt>Widerrufen</dt><dd>{{ link.revoked_at | dt }}</dd>{% endif %}
-      <dt>Link-ID</dt><dd class="mono small">{{ link.id }}</dd>
+      <dt>{{ _("Buch") }}</dt><dd><a href="/admin/books/{{ link.book_id }}">{{ link.book_title }}</a></dd>
+      <dt>{{ _("Ausgabe") }}</dt><dd>{{ _("Nr. %(n)s", n=link.edition_number) }}{% if book.current_edition and book.current_edition.id != link.edition_id %} <span class="muted">({{ _("aktuell ist Nr. %(n)s", n=book.current_edition.number) }})</span>{% endif %}</dd>
+      <dt>{{ _("Formate") }}</dt><dd>{{ link.formats | join(", ") | upper }}</dd>
+      <dt>{{ _("Downloads") }}</dt><dd>{% if link.max_downloads %}{{ _("%(n)s von %(max)s", n=link.download_count, max=link.max_downloads) }}{% else %}{{ _("%(n)s (unbegrenzt)", n=link.download_count) }}{% endif %}</dd>
+      <dt>{{ _("Letzter Download") }}</dt><dd>{{ link.last_download_at | dt }}</dd>
+      <dt>{{ _("Gültig bis") }}</dt><dd>{{ link.expires_at | dt if link.expires_at else _("dauerhaft") }}</dd>
+      <dt>{{ _("Erstellt") }}</dt><dd>{{ link.created_at | dt }}</dd>
+      {% if link.revoked_at %}<dt>{{ _("Widerrufen am") }}</dt><dd>{{ link.revoked_at | dt }}</dd>{% endif %}
+      <dt>{{ _("Link-ID") }}</dt><dd class="mono small">{{ link.id }}</dd>
     </dl>
-    <p class="hint">Der Link selbst ist nicht gespeichert und kann hier nicht angezeigt werden. Geht er verloren, widerrufe diesen Eintrag und erstelle einen neuen Link.</p>
+    <p class="hint">{{ _("Der Link selbst ist nicht gespeichert und kann hier nicht angezeigt werden. Geht er verloren, widerrufe diesen Eintrag und erstelle einen neuen Link.") }}</p>
     {% if stats.total %}
-    <h3>Downloads der letzten 30 Tage</h3>
+    <h3>{{ _("Downloads der letzten 30 Tage") }}</h3>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Tag (UTC)</th><th scope="col" class="num">Downloads</th></tr></thead>
+        <thead><tr><th scope="col">{{ _("Tag (UTC)") }}</th><th scope="col" class="num">{{ _("Downloads") }}</th></tr></thead>
         <tbody>{% for day in stats.by_day %}<tr><td>{{ day.date }}</td><td class="num">{{ day.downloads }}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
@@ -35,80 +35,80 @@
 
   {% if link.status != "revoked" %}
   <section class="card" aria-labelledby="h-edit">
-    <h2 id="h-edit">Bearbeiten</h2>
+    <h2 id="h-edit">{{ _("Bearbeiten") }}</h2>
     <form method="post" action="/admin/links/{{ link.id }}/edit">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
-        <label for="label">Interne Bezeichnung</label>
+        <label for="label">{{ _("Interne Bezeichnung") }}</label>
         <input id="label" name="label" type="text" maxlength="200" value="{{ link.label }}" {{ invalid(error, "label") }}>
         {{ field_error(error, "label") }}
       </div>
       <fieldset>
-        <legend>Freigegebene Formate</legend>
+        <legend>{{ _("Freigegebene Formate") }}</legend>
         <label class="check"><input type="checkbox" name="formats" value="pdf" {% if "pdf" in link.formats %}checked{% endif %}> <span>PDF</span></label>
         <label class="check"><input type="checkbox" name="formats" value="epub" {% if "epub" in link.formats %}checked{% endif %}> <span>EPUB</span></label>
         {{ field_error(error, "formats") }}
       </fieldset>
       <div class="field">
-        <label for="edition_id">Ausgabe</label>
+        <label for="edition_id">{{ _("Ausgabe") }}</label>
         <select id="edition_id" name="edition_id" {{ invalid(error, "edition_id") }}>
           {% for edition in editions %}
-          <option value="{{ edition.id }}" {% if edition.id == link.edition_id %}selected{% endif %}>Ausgabe {{ edition.number }}{% if edition.is_current %} (aktuell){% endif %}: {% for f in edition.files %}{{ f.format | upper }}{% if not loop.last %}, {% endif %}{% endfor %}</option>
+          <option value="{{ edition.id }}" {% if edition.id == link.edition_id %}selected{% endif %}>{{ _("Ausgabe %(n)s", n=edition.number) }}{% if edition.is_current %} ({{ _("aktuell") }}){% endif %}: {% for f in edition.files %}{{ f.format | upper }}{% if not loop.last %}, {% endif %}{% endfor %}</option>
           {% endfor %}
         </select>
-        <p class="hint">Der Käufer erhält die Dateien der hier gewählten Ausgabe.</p>
+        <p class="hint">{{ _("Der Käufer erhält die Dateien der hier gewählten Ausgabe.") }}</p>
         {{ field_error(error, "edition_id") }}
       </div>
       <div class="field">
-        <label for="expires_at">Ablaufdatum <span class="muted">(leer = dauerhaft)</span></label>
+        <label for="expires_at">{{ _("Ablaufdatum") }} <span class="muted">({{ _("leer = dauerhaft") }})</span></label>
         <input id="expires_at" name="expires_at" type="datetime-local" value="{{ link.expires_at | dt_local }}" {{ invalid(error, "expires_at") }}>
-        <p class="hint">Zeitzone: {{ timezone_name }}</p>
+        <p class="hint">{{ _("Zeitzone: %(tz)s", tz=timezone_name) }}</p>
         {{ field_error(error, "expires_at") }}
       </div>
       <div class="field">
-        <label for="max_downloads">Downloadlimit <span class="muted">(leer = unbegrenzt)</span></label>
+        <label for="max_downloads">{{ _("Downloadlimit") }} <span class="muted">({{ _("leer = unbegrenzt") }})</span></label>
         <input id="max_downloads" name="max_downloads" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="{{ link.max_downloads or '' }}" {{ invalid(error, "max_downloads") }}>
         {{ field_error(error, "max_downloads") }}
       </div>
-      <button class="btn" type="submit">Änderungen speichern</button>
+      <button class="btn" type="submit">{{ _("Änderungen speichern") }}</button>
     </form>
   </section>
   {% endif %}
 </div>
 
 <section class="card" aria-labelledby="h-access">
-  <h2 id="h-access">Zugriff steuern</h2>
+  <h2 id="h-access">{{ _("Zugriff steuern") }}</h2>
   {% if link.status == "revoked" %}
-  <p>Dieser Link ist widerrufen und kann nicht wieder aktiviert werden.</p>
+  <p>{{ _("Dieser Link ist widerrufen und kann nicht wieder aktiviert werden.") }}</p>
   <form method="post" action="/admin/links/{{ link.id }}/delete">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, diesen Eintrag samt seiner Downloadstatistik endgültig löschen.</span></label>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>{{ _("Ja, diesen Eintrag samt seiner Downloadstatistik endgültig löschen.") }}</span></label>
     {{ field_error(error, "confirm") }}
-    <button class="btn btn-danger" type="submit">Eintrag löschen</button>
+    <button class="btn btn-danger" type="submit">{{ _("Eintrag löschen") }}</button>
   </form>
   {% else %}
   <div class="grid-2">
     <form method="post" action="/admin/links/{{ link.id }}/status">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       {% if link.status == "active" %}
-      <h3>Vorübergehend deaktivieren</h3>
-      <p class="muted small">Der Käufer sieht einen Hinweis, dass der Link derzeit deaktiviert ist. Du kannst ihn jederzeit wieder aktivieren.</p>
+      <h3>{{ _("Vorübergehend deaktivieren") }}</h3>
+      <p class="muted small">{{ _("Der Käufer sieht einen Hinweis, dass der Link derzeit deaktiviert ist. Du kannst ihn jederzeit wieder aktivieren.") }}</p>
       <input type="hidden" name="status" value="disabled">
-      <button class="btn btn-secondary" type="submit">Deaktivieren</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Deaktivieren") }}</button>
       {% else %}
-      <h3>Wieder aktivieren</h3>
-      <p class="muted small">Der Link ist derzeit deaktiviert.</p>
+      <h3>{{ _("Wieder aktivieren") }}</h3>
+      <p class="muted small">{{ _("Der Link ist derzeit deaktiviert.") }}</p>
       <input type="hidden" name="status" value="active">
-      <button class="btn" type="submit">Aktivieren</button>
+      <button class="btn" type="submit">{{ _("Aktivieren") }}</button>
       {% endif %}
     </form>
     <form method="post" action="/admin/links/{{ link.id }}/revoke">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <h3>Endgültig widerrufen</h3>
-      <p class="muted small">Der Link funktioniert danach nie wieder, auch laufende Downloads lassen sich nicht fortsetzen.</p>
-      <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, diesen Link endgültig widerrufen.</span></label>
+      <h3>{{ _("Endgültig widerrufen") }}</h3>
+      <p class="muted small">{{ _("Der Link funktioniert danach nie wieder, auch laufende Downloads lassen sich nicht fortsetzen.") }}</p>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>{{ _("Ja, diesen Link endgültig widerrufen.") }}</span></label>
       {{ field_error(error, "confirm") }}
-      <button class="btn btn-danger" type="submit">Widerrufen</button>
+      <button class="btn btn-danger" type="submit">{{ _("Widerrufen") }}</button>
     </form>
   </div>
   {% endif %}

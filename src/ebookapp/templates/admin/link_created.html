@@ -1,44 +1,44 @@
 {% extends "admin/base.html" %}
-{% block title %}Link erstellt{% endblock %}
+{% block title %}{{ _("Link erstellt") }}{% endblock %}
 {% block main_class %}narrow{% endblock %}
 {% block content %}
-<p class="breadcrumb"><a href="/admin/links">Downloadlinks</a> › Link erstellt</p>
-<h1>Link erstellt</h1>
+<p class="breadcrumb"><a href="/admin/links">{{ _("Downloadlinks") }}</a> › {{ _("Link erstellt") }}</p>
+<h1>{{ _("Link erstellt") }}</h1>
 <div class="alert alert-warn" role="status">
-  <p><strong>Kopiere den Link jetzt.</strong> Er wird nur auf dieser Seite angezeigt und lässt sich später nicht mehr abrufen. Geht er verloren, widerrufst du ihn und erstellst einen neuen.</p>
+  <p>{{ _("<strong>Kopiere den Link jetzt.</strong> Er wird nur auf dieser Seite angezeigt und lässt sich später nicht mehr abrufen. Geht er verloren, widerrufst du ihn und erstellst einen neuen.") | safe }}</p>
 </div>
 
 <section class="card" aria-labelledby="h-url">
-  <h2 id="h-url">Downloadlink</h2>
-  <label class="visually-hidden" for="link-url">Downloadlink</label>
+  <h2 id="h-url">{{ _("Downloadlink") }}</h2>
+  <label class="visually-hidden" for="link-url">{{ _("Downloadlink") }}</label>
   <div class="copy-row">
     <input id="link-url" type="text" readonly value="{{ url }}" class="mono" spellcheck="false">
-    <button type="button" class="btn" data-copy="link-url" data-copy-status="status-url">Link kopieren</button>
+    <button type="button" class="btn" data-copy="link-url" data-copy-status="status-url">{{ _("Link kopieren") }}</button>
   </div>
   <p class="copy-status" id="status-url" role="status" aria-live="polite"></p>
   <dl class="facts small">
-    <dt>Buch</dt><dd>{{ link.book_title }} (Ausgabe {{ link.edition_number }})</dd>
-    <dt>Formate</dt><dd>{{ link.formats | join(", ") | upper }}</dd>
-    <dt>Bezeichnung</dt><dd>{{ link.label or "–" }}</dd>
-    <dt>Gültig bis</dt><dd>{{ link.expires_at | dt if link.expires_at else "dauerhaft" }}</dd>
-    <dt>Downloadlimit</dt><dd>{{ link.max_downloads or "unbegrenzt" }}</dd>
+    <dt>{{ _("Buch") }}</dt><dd>{{ link.book_title }} ({{ _("Ausgabe %(n)s", n=link.edition_number) }})</dd>
+    <dt>{{ _("Formate") }}</dt><dd>{{ link.formats | join(", ") | upper }}</dd>
+    <dt>{{ _("Bezeichnung") }}</dt><dd>{{ link.label or "–" }}</dd>
+    <dt>{{ _("Gültig bis") }}</dt><dd>{{ link.expires_at | dt if link.expires_at else _("dauerhaft") }}</dd>
+    <dt>{{ _("Downloadlimit") }}</dt><dd>{{ link.max_downloads or _("unbegrenzt") }}</dd>
   </dl>
 </section>
 
 <section class="card" aria-labelledby="h-msg">
-  <h2 id="h-msg">Versandnachricht <span class="muted small">({{ language_label }})</span></h2>
-  <label class="visually-hidden" for="link-message">Versandnachricht</label>
+  <h2 id="h-msg">{{ _("Versandnachricht") }} <span class="muted small">({{ _(language_label) }})</span></h2>
+  <label class="visually-hidden" for="link-message">{{ _("Versandnachricht") }}</label>
   <textarea id="link-message" readonly rows="11">{{ message }}</textarea>
   <div class="row mt">
-    <button type="button" class="btn" data-copy="link-message" data-copy-status="status-msg">Nachricht kopieren</button>
-    <a href="/admin/settings#versand">Vorlage ändern</a>
+    <button type="button" class="btn" data-copy="link-message" data-copy-status="status-msg">{{ _("Nachricht kopieren") }}</button>
+    <a href="/admin/settings#versand">{{ _("Vorlage ändern") }}</a>
   </div>
   <p class="copy-status" id="status-msg" role="status" aria-live="polite"></p>
-  <p class="hint">Die Nachricht wird nicht versendet. Du fügst sie selbst in deine E-Mail oder deinen Chat ein.</p>
+  <p class="hint">{{ _("Die Nachricht wird nicht versendet. Du fügst sie selbst in deine E-Mail oder deinen Chat ein.") }}</p>
 </section>
 
 <p class="row">
-  <a class="btn btn-secondary" href="/admin/links/{{ link.id }}">Zum Link-Eintrag</a>
-  <a class="btn btn-secondary" href="/admin/links/new?book_id={{ link.book_id }}">Weiteren Link erstellen</a>
+  <a class="btn btn-secondary" href="/admin/links/{{ link.id }}">{{ _("Zum Link-Eintrag") }}</a>
+  <a class="btn btn-secondary" href="/admin/links/new?book_id={{ link.book_id }}">{{ _("Weiteren Link erstellen") }}</a>
 </p>
 {% endblock %}

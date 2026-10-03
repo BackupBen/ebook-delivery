@@ -27,6 +27,7 @@ from typing import Any
 from ..config import Settings
 from ..db import connect, iso, now_iso, now_utc, transaction
 from ..errors import AppError, Conflict, NotFound
+from ..i18n import N_, _
 from ..schemas import LinkCreate
 from ..security import new_id, unwrap_code, wrap_code
 from . import links as link_service
@@ -43,11 +44,11 @@ CLAIM_MINUTES = 10
 WRAP_SCOPE = "order-mail"
 
 STATUS_LABELS = {
-    "pending": "Wird versendet",
-    "sent": "Versendet",
-    "failed": "Versand fehlgeschlagen",
-    "unmatched": "Kein passendes Buch",
-    "no_email": "Keine E-Mail-Adresse",
+    "pending": N_("Wird versendet"),
+    "sent": N_("Versendet"),
+    "failed": N_("Versand fehlgeschlagen"),
+    "unmatched": N_("Kein passendes Buch"),
+    "no_email": N_("Keine E-Mail-Adresse"),
 }
 
 
@@ -75,22 +76,22 @@ def verify_whop_signature(
     timestamp = headers.get("webhook-timestamp", "")
     signatures = headers.get("webhook-signature", "")
     if not webhook_id or not timestamp or not signatures or len(webhook_id) > 200:
-        raise WebhookRejected(400, "Signatur-Kopfzeilen fehlen.")
+        raise WebhookRejected(400, _("Signatur-Kopfzeilen fehlen."))
     try:
         sent_at = int(timestamp)
     except ValueError as exc:
-        raise WebhookRejected(400, "Ungültiger Zeitstempel.") from exc
+        raise WebhookRejected(400, _("Ungültiger Zeitstempel.")) from exc
     current = time.time() if now is None else now
     if abs(current - sent_at) > SIGNATURE_TOLERANCE_SECONDS:
-        raise WebhookRejected(401, "Zeitstempel außerhalb des erlaubten Fensters.")
+        raise WebhookRejected(401, _("Zeitstempel außerhalb des erlaubten Fensters."))
     signed = f"{webhook_id}.{timestamp}.".encode() + body
     digest = hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).digest()
     expected = base64.b64encode(digest).decode("ascii")
     for candidate in signatures.split():
-        version, _, value = candidate.partition(",")
+        version, _sep, value = candidate.partition(",")
         if version == "v1" and hmac.compare_digest(value.encode(), expected.encode()):
             return webhook_id
-    raise WebhookRejected(401, "Signatur ungültig.")
+    raise WebhookRejected(401, _("Signatur ungültig."))
 
 
 @dataclass(frozen=True)
@@ -127,14 +128,14 @@ def handle_whop_webhook(
     """Verarbeitet eine Zustellung von Whop und liefert ein kurzes Ergebnis fürs Log."""
     if not settings.whop_webhook_secret:
         # 503: Whop wiederholt die Zustellung, bis das Geheimnis eingetragen ist.
-        raise WebhookRejected(503, "WHOP_WEBHOOK_SECRET ist nicht gesetzt.")
+        raise WebhookRejected(503, _("WHOP_WEBHOOK_SECRET ist nicht gesetzt."))
     webhook_id = verify_whop_signature(settings.whop_webhook_secret, headers, body)
     try:
         payload = json.loads(body)
     except ValueError as exc:
-        raise WebhookRejected(400, "Kein gültiges JSON.") from exc
+        raise WebhookRejected(400, _("Kein gültiges JSON.")) from exc
     if not isinstance(payload, dict):
-        raise WebhookRejected(400, "Unerwartetes Format.")
+        raise WebhookRejected(400, _("Unerwartetes Format."))
     event_type = _text(payload.get("type"), 100)
 
     seen = conn.execute(
@@ -199,18 +200,20 @@ def record_payment(conn: sqlite3.Connection, settings: Settings, payment: Paymen
 
 def _matching_book(conn: sqlite3.Connection, product_id: str) -> tuple[sqlite3.Row | None, str]:
     if not product_id:
-        return None, "Die Zahlung enthält keine Produkt-ID."
+        return None, _("Die Zahlung enthält keine Produkt-ID.")
     rows = conn.execute(
         "SELECT * FROM books WHERE whop_product_id = ? ORDER BY status = 'active' DESC, created_at",
         (product_id,),
     ).fetchall()
     if not rows:
-        return None, f"Kein Buch mit der Whop-Produkt-ID {product_id}."
+        return None, _("Kein Buch mit der Whop-Produkt-ID %(product_id)s.", product_id=product_id)
     book = rows[0]
     if book["status"] != "active":
-        return None, f"Das Buch „{book['title']}“ ist archiviert."
+        return None, _("Das Buch „%(title)s“ ist archiviert.", title=book["title"])
     if not book["current_edition_id"]:
-        return None, f"Das Buch „{book['title']}“ hat noch keine veröffentlichte Ausgabe."
+        return None, _(
+            "Das Buch „%(title)s“ hat noch keine veröffentlichte Ausgabe.", title=book["title"]
+        )
     return book, ""
 
 
@@ -218,7 +221,7 @@ def attach_link(conn: sqlite3.Connection, settings: Settings, order_id: str) -> 
     """Erzeugt den Link einer Bestellung und plant den Versand."""
     order = _order_row(conn, order_id)
     if not order["email"]:
-        _update(conn, order_id, status="no_email", detail="Die Zahlung enthält keine E-Mail.")
+        _update(conn, order_id, status="no_email", detail=_("Die Zahlung enthält keine E-Mail."))
         return "no_email"
     book, problem = _matching_book(conn, order["product_id"])
     if book is None:
@@ -275,7 +278,7 @@ def _update(conn: sqlite3.Connection, order_id: str, **changes: Any) -> None:
 def _order_row(conn: sqlite3.Connection, order_id: str) -> sqlite3.Row:
     row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     if row is None:
-        raise NotFound("Diese Bestellung gibt es nicht.", code="order_not_found")
+        raise NotFound(_("Diese Bestellung gibt es nicht."), code="order_not_found")
     return row
 
 
@@ -298,7 +301,7 @@ def order_out(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
         "email": row["email"],
         "name": row["name"],
         "status": row["status"],
-        "status_label": STATUS_LABELS.get(row["status"], row["status"]),
+        "status_label": _(STATUS_LABELS.get(row["status"], row["status"])),
         "detail": row["detail"],
         "attempts": row["attempts"],
         "next_attempt_at": row["next_attempt_at"],
@@ -355,7 +358,7 @@ def retry(conn: sqlite3.Connection, settings: Settings, order_id: str) -> str:
     order = _order_row(conn, order_id)
     if order["status"] == "sent":
         raise Conflict(
-            "Die E-Mail wurde bereits versendet. Verwende „Neuen Link senden“.",
+            _("Die E-Mail wurde bereits versendet. Verwende „Neuen Link senden“."),
             code="order_already_sent",
         )
     if order["status"] in ("unmatched", "no_email") or not order["link_id"]:
@@ -458,10 +461,10 @@ def _deliver_one(conn: sqlite3.Connection, settings: Settings, order_id: str) ->
     try:
         link = link_service.get_link(conn, order["link_id"])
     except NotFound:
-        _update(conn, order_id, status="failed", detail="Der Link wurde gelöscht.")
+        _update(conn, order_id, status="failed", detail=_("Der Link wurde gelöscht."))
         return False
     if link["status"] == "revoked":
-        _update(conn, order_id, status="failed", detail="Der Link wurde widerrufen.")
+        _update(conn, order_id, status="failed", detail=_("Der Link wurde widerrufen."))
         return False
     code = unwrap_code(
         settings.secret_key, WRAP_SCOPE, order_id, order["link_id"], order["wrapped_code"]

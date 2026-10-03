@@ -1,70 +1,70 @@
 {% extends "admin/base.html" %}
 {% from "admin/_macros.html" import pagination %}
-{% block title %}Bestellungen{% endblock %}
+{% block title %}{{ _("Bestellungen") }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>Bestellungen</h1>
+  <h1>{{ _("Bestellungen") }}</h1>
 </div>
 
 {% if not whop_configured or not mail_configured %}
 <div class="alert alert-warn" role="status">
-  <p><strong>Automatische Auslieferung noch nicht vollständig eingerichtet.</strong></p>
+  <p><strong>{{ _("Automatische Auslieferung noch nicht vollständig eingerichtet.") }}</strong></p>
   <ul>
-    {% if not whop_configured %}<li><code>WHOP_WEBHOOK_SECRET</code> fehlt: Zahlungen von Whop werden abgelehnt.</li>{% endif %}
-    {% if not mail_configured %}<li><code>BREVO_API_KEY</code> und <code>MAIL_FROM_EMAIL</code> fehlen: Bestellungen werden angenommen, E-Mails aber erst versendet, wenn beides gesetzt ist.</li>{% endif %}
+    {% if not whop_configured %}<li>{{ _("<code>WHOP_WEBHOOK_SECRET</code> fehlt: Zahlungen von Whop werden abgelehnt.") | safe }}</li>{% endif %}
+    {% if not mail_configured %}<li>{{ _("<code>BREVO_API_KEY</code> und <code>MAIL_FROM_EMAIL</code> fehlen: Bestellungen werden angenommen, E-Mails aber erst versendet, wenn beides gesetzt ist.") | safe }}</li>{% endif %}
   </ul>
 </div>
 {% endif %}
 
 <section class="card" aria-labelledby="h-hook">
-  <h2 id="h-hook">Whop-Webhook</h2>
-  <p>In Whop unter <em>Developer → Webhooks</em> einen Webhook mit dieser Adresse und dem Ereignis <code>payment.succeeded</code> anlegen. Das dort angezeigte Geheimnis (<code>ws_…</code>) als <code>WHOP_WEBHOOK_SECRET</code> eintragen.</p>
-  <label class="visually-hidden" for="webhook-url">Webhook-Adresse</label>
+  <h2 id="h-hook">{{ _("Whop-Webhook") }}</h2>
+  <p>{{ _("In Whop unter <em>Developer → Webhooks</em> einen Webhook mit dieser Adresse und dem Ereignis <code>payment.succeeded</code> anlegen. Das dort angezeigte Geheimnis (<code>ws_…</code>) als <code>WHOP_WEBHOOK_SECRET</code> eintragen.") | safe }}</p>
+  <label class="visually-hidden" for="webhook-url">{{ _("Webhook-Adresse") }}</label>
   <div class="copy-row">
     <input id="webhook-url" type="text" readonly value="{{ webhook_url }}" class="mono" spellcheck="false">
-    <button type="button" class="btn btn-secondary" data-copy="webhook-url" data-copy-status="status-hook">Kopieren</button>
+    <button type="button" class="btn btn-secondary" data-copy="webhook-url" data-copy-status="status-hook">{{ _("Kopieren") }}</button>
   </div>
   <p class="copy-status" id="status-hook" role="status" aria-live="polite"></p>
-  <p class="hint">Zugeordnet wird über die <strong>Whop-Produkt-ID</strong> des Buchs. Die Sprache der E-Mail richtet sich nach der Sprache des Buchs.</p>
+  <p class="hint">{{ _("Zugeordnet wird über die <strong>Whop-Produkt-ID</strong> des Buchs. Die Sprache der E-Mail richtet sich nach der Sprache des Buchs.") | safe }}</p>
 </section>
 
-<form class="card filters" method="get" action="/admin/orders" role="search" aria-label="Bestellungen durchsuchen">
+<form class="card filters" method="get" action="/admin/orders" role="search" aria-label="{{ _('Bestellungen durchsuchen') }}">
   <div class="field field-wide">
-    <label for="q">Suche</label>
-    <input id="q" name="q" type="search" value="{{ q }}" placeholder="E-Mail-Adresse, Zahlungs-ID oder Produkt-ID">
+    <label for="q">{{ _("Suche") }}</label>
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="{{ _('E-Mail-Adresse, Zahlungs-ID oder Produkt-ID') }}">
   </div>
   <div class="field">
-    <label for="status">Status</label>
+    <label for="status">{{ _("Status") }}</label>
     <select id="status" name="status">
-      <option value="">Alle</option>
+      <option value="">{{ _("Alle") }}</option>
       {% for key, label in ORDER_STATUS_LABELS.items() %}
-      <option value="{{ key }}" {% if key == status %}selected{% endif %}>{{ label }}{% if counts.get(key) %} ({{ counts[key] }}){% endif %}</option>
+      <option value="{{ key }}" {% if key == status %}selected{% endif %}>{{ _(label) }}{% if counts.get(key) %} ({{ counts[key] }}){% endif %}</option>
       {% endfor %}
     </select>
   </div>
-  <button class="btn btn-secondary" type="submit">Filtern</button>
+  <button class="btn btn-secondary" type="submit">{{ _("Filtern") }}</button>
 </form>
 
 <div class="card">
   {% if result["items"] %}
-  <p class="muted small">{{ result.total }} {{ "Bestellung" if result.total == 1 else "Bestellungen" }}</p>
+  <p class="muted small">{{ _("%(n)s Bestellung", n=result.total) if result.total == 1 else _("%(n)s Bestellungen", n=result.total) }}</p>
   <div class="table-wrap">
     <table class="responsive">
       <thead>
         <tr>
-          <th scope="col">Eingang</th>
-          <th scope="col">Käufer</th>
-          <th scope="col">Buch</th>
-          <th scope="col">Status</th>
+          <th scope="col">{{ _("Eingang") }}</th>
+          <th scope="col">{{ _("Käufer") }}</th>
+          <th scope="col">{{ _("Buch") }}</th>
+          <th scope="col">{{ _("Status") }}</th>
         </tr>
       </thead>
       <tbody>
         {% for order in result["items"] %}
         <tr>
           <td class="primary"><a href="/admin/orders/{{ order.id }}">{{ order.created_at | dt }}</a></td>
-          <td data-label="Käufer">{{ order.email or "–" }}{% if order.name %} <span class="muted small">({{ order.name }})</span>{% endif %}</td>
-          <td data-label="Buch">{% if order.book %}{{ order.book.title }}{% else %}<span class="muted">{{ order.product_title or order.product_id or "–" }}</span>{% endif %}</td>
-          <td data-label="Status"><span class="badge badge-{{ order.status }}">{{ order.status_label }}</span></td>
+          <td data-label="{{ _('Käufer') }}">{{ order.email or "–" }}{% if order.name %} <span class="muted small">({{ order.name }})</span>{% endif %}</td>
+          <td data-label="{{ _('Buch') }}">{% if order.book %}{{ order.book.title }}{% else %}<span class="muted">{{ order.product_title or order.product_id or "–" }}</span>{% endif %}</td>
+          <td data-label="{{ _('Status') }}"><span class="badge badge-{{ order.status }}">{{ order.status_label }}</span></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -72,7 +72,7 @@
   </div>
   {{ pagination(result, page, page_size, "q=" ~ (q | urlencode) ~ "&status=" ~ status) }}
   {% else %}
-  <p>{% if q or status %}Keine Bestellungen gefunden, die zu den Filtern passen.{% else %}Noch keine Bestellungen eingegangen.{% endif %}</p>
+  <p>{% if q or status %}{{ _("Keine Bestellungen gefunden, die zu den Filtern passen.") }}{% else %}{{ _("Noch keine Bestellungen eingegangen.") }}{% endif %}</p>
   {% endif %}
 </div>
 {% endblock %}

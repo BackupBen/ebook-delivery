@@ -2,123 +2,123 @@
 {% from "admin/_macros.html" import field_error, invalid, state_badge, formats_text %}
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
-<p class="breadcrumb"><a href="/admin/books">Bücher</a> › {{ book.title }}</p>
+<p class="breadcrumb"><a href="/admin/books">{{ _("Bücher") }}</a> › {{ book.title }}</p>
 <div class="page-head">
   <h1>{{ book.title }}
-    {% if book.status == "archived" %}<span class="badge badge-archived">archiviert</span>{% endif %}
+    {% if book.status == "archived" %}<span class="badge badge-archived">{{ _("archiviert") }}</span>{% endif %}
   </h1>
   {% if book.current_edition and book.status == "active" %}
-  <a class="btn" href="/admin/links/new?book_id={{ book.id }}">Downloadlink erstellen</a>
+  <a class="btn" href="/admin/links/new?book_id={{ book.id }}">{{ _("Downloadlink erstellen") }}</a>
   {% endif %}
 </div>
 
 {% if not book.current_edition %}
 <div class="alert alert-info" role="status">
-  <p><strong>Noch nicht veröffentlicht.</strong> Lade unten ein PDF und/oder EPUB in den Entwurf und veröffentliche die Ausgabe. Erst danach kannst du Downloadlinks erstellen.</p>
+  <p>{{ _("<strong>Noch nicht veröffentlicht.</strong> Lade unten ein PDF und/oder EPUB in den Entwurf und veröffentliche die Ausgabe. Erst danach kannst du Downloadlinks erstellen.") | safe }}</p>
 </div>
 {% endif %}
 
 <div class="grid-2">
   <section class="card" aria-labelledby="h-meta">
-    <h2 id="h-meta">Angaben</h2>
+    <h2 id="h-meta">{{ _("Angaben") }}</h2>
     <form method="post" action="/admin/books/{{ book.id }}/edit">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
-        <label for="title">Titel</label>
+        <label for="title">{{ _("Titel") }}</label>
         <input id="title" name="title" type="text" required maxlength="200" value="{{ values.title if values.title is defined else book.title }}" {{ invalid(error, "title") }}>
         {{ field_error(error, "title") }}
       </div>
       <div class="field">
-        <label for="description">Beschreibung <span class="muted">(optional)</span></label>
+        <label for="description">{{ _("Beschreibung") }} <span class="muted">{{ _("(optional)") }}</span></label>
         <textarea id="description" name="description" maxlength="5000" {{ invalid(error, "description") }}>{{ values.description if values.description is defined else book.description }}</textarea>
         {{ field_error(error, "description") }}
       </div>
       <div class="field">
-        <label for="language">Sprache</label>
+        <label for="language">{{ _("Sprache") }}</label>
         {% set current_language = values.language if values.language is defined and values.language else book.language %}
         <select id="language" name="language" {{ invalid(error, "language") }}>
           {% for code, label in LANGUAGE_LABELS.items() %}
-          <option value="{{ code }}"{% if current_language == code %} selected{% endif %}>{{ label }}</option>
+          <option value="{{ code }}"{% if current_language == code %} selected{% endif %}>{{ _(label) }}</option>
           {% endfor %}
         </select>
-        <p class="hint">Bestimmt die Sprache der Downloadseite und der Versandnachricht, auch für bestehende Links.</p>
+        <p class="hint">{{ _("Bestimmt die Sprache der Downloadseite und der Versandnachricht, auch für bestehende Links.") }}</p>
         {{ field_error(error, "language") }}
       </div>
       <div class="field">
-        <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
+        <label for="whop_product_id">{{ _("Whop-Produkt-ID") }} <span class="muted">{{ _("(optional)") }}</span></label>
         <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ (values.whop_product_id if values.whop_product_id is defined else book.whop_product_id) or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
         {{ field_error(error, "whop_product_id") }}
       </div>
-      <button class="btn" type="submit">Angaben speichern</button>
+      <button class="btn" type="submit">{{ _("Angaben speichern") }}</button>
     </form>
     <dl class="facts small mt">
-      <dt>Buch-ID</dt><dd class="mono">{{ book.id }}</dd>
-      <dt>Sprache</dt><dd>{{ LANGUAGE_LABELS[book.language] }}</dd>
-      <dt>Angelegt</dt><dd>{{ book.created_at | dt }}</dd>
-      <dt>Downloads gesamt</dt><dd>{{ book.downloads_total }}</dd>
+      <dt>{{ _("Buch-ID") }}</dt><dd class="mono">{{ book.id }}</dd>
+      <dt>{{ _("Sprache") }}</dt><dd>{{ _(LANGUAGE_LABELS[book.language]) }}</dd>
+      <dt>{{ _("Angelegt") }}</dt><dd>{{ book.created_at | dt }}</dd>
+      <dt>{{ _("Downloads gesamt") }}</dt><dd>{{ book.downloads_total }}</dd>
     </dl>
   </section>
 
   <section class="card" aria-labelledby="h-cover">
-    <h2 id="h-cover">Cover <span class="muted">(optional)</span></h2>
+    <h2 id="h-cover">{{ _("Cover") }} <span class="muted">{{ _("(optional)") }}</span></h2>
     {% if book.has_cover %}
-    <p><img class="cover-thumb" src="/admin/books/{{ book.id }}/cover?v={{ book.updated_at | urlencode }}" alt="Cover von {{ book.title }}"></p>
+    <p><img class="cover-thumb" src="/admin/books/{{ book.id }}/cover?v={{ book.updated_at | urlencode }}" alt="{{ _('Cover von %(title)s', title=book.title) }}"></p>
     {% else %}
-    <p class="muted">Kein Cover hinterlegt.</p>
+    <p class="muted">{{ _("Kein Cover hinterlegt.") }}</p>
     {% endif %}
     <form method="post" action="/admin/books/{{ book.id }}/cover" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
-        <label for="cover">{{ "Cover ersetzen" if book.has_cover else "Cover hochladen" }}</label>
+        <label for="cover">{{ _("Cover ersetzen") if book.has_cover else _("Cover hochladen") }}</label>
         <input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp" required {{ invalid(error, "cover") }}>
-        <p class="hint">JPEG, PNG oder WebP, höchstens {{ limits.cover_mb }} MB. Das Bild wird verkleinert und ohne Metadaten gespeichert.</p>
+        <p class="hint">{{ _("JPEG, PNG oder WebP, höchstens %(mb)s MB. Das Bild wird verkleinert und ohne Metadaten gespeichert.", mb=limits.cover_mb) }}</p>
         {{ field_error(error, "cover") }}
       </div>
-      <button class="btn btn-secondary" type="submit">Cover speichern</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Cover speichern") }}</button>
     </form>
     {% if book.has_cover %}
     <form method="post" action="/admin/books/{{ book.id }}/cover/delete">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="btn btn-secondary btn-small" type="submit">Cover entfernen</button>
+      <button class="btn btn-secondary btn-small" type="submit">{{ _("Cover entfernen") }}</button>
     </form>
     {% endif %}
   </section>
 </div>
 
 <section class="card" aria-labelledby="h-editions">
-  <h2 id="h-editions">Ausgaben und Dateien</h2>
-  <p class="muted small">Veröffentlichte Ausgaben sind unveränderlich. Für geänderte Dateien legst du eine neue Ausgabe an. Jeder Downloadlink ist fest an eine Ausgabe gebunden.</p>
+  <h2 id="h-editions">{{ _("Ausgaben und Dateien") }}</h2>
+  <p class="muted small">{{ _("Veröffentlichte Ausgaben sind unveränderlich. Für geänderte Dateien legst du eine neue Ausgabe an. Jeder Downloadlink ist fest an eine Ausgabe gebunden.") }}</p>
 
   {% for edition in editions %}
   <div class="edition">
-    <h3>Ausgabe {{ edition.number }}
-      {% if edition.status == "draft" %}<span class="badge badge-draft">Entwurf</span>
-      {% elif edition.is_current %}<span class="badge badge-published">aktuell</span>
-      {% else %}<span class="badge">frühere Ausgabe</span>{% endif %}
+    <h3>{{ _("Ausgabe %(n)s", n=edition.number) }}
+      {% if edition.status == "draft" %}<span class="badge badge-draft">{{ _("Entwurf") }}</span>
+      {% elif edition.is_current %}<span class="badge badge-published">{{ _("aktuell") }}</span>
+      {% else %}<span class="badge">{{ _("frühere Ausgabe") }}</span>{% endif %}
     </h3>
     <p class="small muted">
-      {% if edition.published_at %}Veröffentlicht am {{ edition.published_at | dt }} · {% endif %}
-      {{ edition.links_count }} {{ "Link" if edition.links_count == 1 else "Links" }} an diese Ausgabe gebunden
-      {% if edition.note %} · Notiz: {{ edition.note }}{% endif %}
+      {% if edition.published_at %}{{ _("Veröffentlicht am %(date)s", date=edition.published_at | dt) }} · {% endif %}
+      {{ _("%(n)s Link an diese Ausgabe gebunden", n=edition.links_count) if edition.links_count == 1 else _("%(n)s Links an diese Ausgabe gebunden", n=edition.links_count) }}
+      {% if edition.note %} · {{ _("Notiz: %(note)s", note=edition.note) }}{% endif %}
     </p>
 
     {% if edition.files %}
     <div class="table-wrap">
       <table class="responsive">
-        <thead><tr><th scope="col">Format</th><th scope="col">Dateiname</th><th scope="col" class="num">Größe</th><th scope="col">SHA-256</th><th scope="col">Aktionen</th></tr></thead>
+        <thead><tr><th scope="col">{{ _("Format") }}</th><th scope="col">{{ _("Dateiname") }}</th><th scope="col" class="num">{{ _("Größe") }}</th><th scope="col">SHA-256</th><th scope="col">{{ _("Aktionen") }}</th></tr></thead>
         <tbody>
           {% for file in edition.files %}
           <tr>
             <td class="primary">{{ file.format | upper }}</td>
-            <td data-label="Dateiname">{{ file.original_filename }}</td>
-            <td data-label="Größe" class="num nowrap">{{ file.size_bytes | filesize }}</td>
+            <td data-label="{{ _('Dateiname') }}">{{ file.original_filename }}</td>
+            <td data-label="{{ _('Größe') }}" class="num nowrap">{{ file.size_bytes | filesize }}</td>
             <td data-label="SHA-256"><span class="mono small" title="{{ file.sha256 }}">{{ file.sha256[:16] }}…</span></td>
-            <td data-label="Aktionen">
-              <a class="btn btn-secondary btn-small" href="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files/{{ file.format }}">Prüfen</a>
+            <td data-label="{{ _('Aktionen') }}">
+              <a class="btn btn-secondary btn-small" href="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files/{{ file.format }}">{{ _("Prüfen") }}</a>
               {% if edition.status == "draft" %}
               <form class="inline-form" method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files/{{ file.format }}/delete">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button class="btn btn-secondary btn-small" type="submit">Entfernen</button>
+                <button class="btn btn-secondary btn-small" type="submit">{{ _("Entfernen") }}</button>
               </form>
               {% endif %}
             </td>
@@ -128,77 +128,77 @@
       </table>
     </div>
     {% else %}
-    <p class="muted">Noch keine Dateien.</p>
+    <p class="muted">{{ _("Noch keine Dateien.") }}</p>
     {% endif %}
 
     {% if edition.status == "draft" %}
     <form class="stack" method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/files" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <fieldset>
-        <legend>Dateien hochladen oder ersetzen</legend>
+        <legend>{{ _("Dateien hochladen oder ersetzen") }}</legend>
         <div class="grid-2">
           <div class="field">
             <label for="pdf-{{ edition.id }}">PDF</label>
             <input id="pdf-{{ edition.id }}" name="pdf" type="file" accept=".pdf,application/pdf" {{ invalid(error, "pdf") }}>
-            <p class="hint">Höchstens {{ limits.pdf_mb }} MB.</p>
+            <p class="hint">{{ _("Höchstens %(mb)s MB.", mb=limits.pdf_mb) }}</p>
             {{ field_error(error, "pdf") }}
           </div>
           <div class="field">
             <label for="epub-{{ edition.id }}">EPUB</label>
             <input id="epub-{{ edition.id }}" name="epub" type="file" accept=".epub,application/epub+zip" {{ invalid(error, "epub") }}>
-            <p class="hint">Höchstens {{ limits.epub_mb }} MB.</p>
+            <p class="hint">{{ _("Höchstens %(mb)s MB.", mb=limits.epub_mb) }}</p>
             {{ field_error(error, "epub") }}
           </div>
         </div>
-        <button class="btn btn-secondary" type="submit">Hochladen</button>
-        <p class="hint">Große Dateien brauchen einen Moment. Bitte die Seite währenddessen nicht schließen.</p>
+        <button class="btn btn-secondary" type="submit">{{ _("Hochladen") }}</button>
+        <p class="hint">{{ _("Große Dateien brauchen einen Moment. Bitte die Seite währenddessen nicht schließen.") }}</p>
       </fieldset>
     </form>
 
     <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/publish">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <fieldset>
-        <legend>Ausgabe {{ edition.number }} veröffentlichen</legend>
+        <legend>{{ _("Ausgabe %(n)s veröffentlichen", n=edition.number) }}</legend>
         {% if book.links.total > 0 and book.current_edition %}
-        <p>Dieses Buch hat bereits Downloadlinks ({{ book.current_edition.links_count }} davon an Ausgabe {{ book.current_edition.number }}, Formate: {{ formats_text(book.current_edition.files) }}). Der Entwurf enthält: <strong>{{ formats_text(edition.files) }}</strong>. Was soll mit den bestehenden Links geschehen?</p>
+        <p>{{ _("Dieses Buch hat bereits Downloadlinks (%(count)s davon an Ausgabe %(number)s, Formate: %(formats)s). Der Entwurf enthält: <strong>%(draft_formats)s</strong>. Was soll mit den bestehenden Links geschehen?", count=book.current_edition.links_count, number=book.current_edition.number, formats=formats_text(book.current_edition.files) | e, draft_formats=formats_text(edition.files) | e) | safe }}</p>
         <label class="check">
           <input type="radio" name="existing_links" value="keep" required>
-          <span><strong>Bestehende Links bleiben an ihrer bisherigen Ausgabe.</strong><br><span class="muted small">Käufer mit alten Links laden weiter die alte Fassung. Nur neue Links erhalten Ausgabe {{ edition.number }}.</span></span>
+          <span><strong>{{ _("Bestehende Links bleiben an ihrer bisherigen Ausgabe.") }}</strong><br><span class="muted small">{{ _("Käufer mit alten Links laden weiter die alte Fassung. Nur neue Links erhalten Ausgabe %(n)s.", n=edition.number) }}</span></span>
         </label>
         <label class="check">
           <input type="radio" name="existing_links" value="migrate" required>
-          <span><strong>Bestehende Links erhalten die neue Ausgabe.</strong><br><span class="muted small">Alle nicht widerrufenen Links liefern ab sofort Ausgabe {{ edition.number }}. Formate, die in der neuen Ausgabe fehlen, stehen dann nicht mehr zur Verfügung.</span></span>
+          <span><strong>{{ _("Bestehende Links erhalten die neue Ausgabe.") }}</strong><br><span class="muted small">{{ _("Alle nicht widerrufenen Links liefern ab sofort Ausgabe %(n)s. Formate, die in der neuen Ausgabe fehlen, stehen dann nicht mehr zur Verfügung.", n=edition.number) }}</span></span>
         </label>
         {{ field_error(error, "existing_links") }}
         {% else %}
-        <p class="muted">Es gibt noch keine Downloadlinks für dieses Buch.</p>
+        <p class="muted">{{ _("Es gibt noch keine Downloadlinks für dieses Buch.") }}</p>
         {% endif %}
-        <button class="btn" type="submit" {% if not edition.files %}disabled aria-describedby="pub-hint-{{ edition.id }}"{% endif %}>Jetzt veröffentlichen</button>
-        {% if not edition.files %}<p class="hint" id="pub-hint-{{ edition.id }}">Lade zuerst mindestens eine Datei hoch.</p>{% endif %}
+        <button class="btn" type="submit" {% if not edition.files %}disabled aria-describedby="pub-hint-{{ edition.id }}"{% endif %}>{{ _("Jetzt veröffentlichen") }}</button>
+        {% if not edition.files %}<p class="hint" id="pub-hint-{{ edition.id }}">{{ _("Lade zuerst mindestens eine Datei hoch.") }}</p>{% endif %}
       </fieldset>
     </form>
 
     <details>
-      <summary>Entwurf verwerfen</summary>
+      <summary>{{ _("Entwurf verwerfen") }}</summary>
       <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/delete">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, den Entwurf mit seinen Dateien löschen. Links sind davon nicht betroffen.</span></label>
-        <button class="btn btn-danger btn-small" type="submit">Entwurf löschen</button>
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>{{ _("Ja, den Entwurf mit seinen Dateien löschen. Links sind davon nicht betroffen.") }}</span></label>
+        <button class="btn btn-danger btn-small" type="submit">{{ _("Entwurf löschen") }}</button>
       </form>
     </details>
 
     {% elif not edition.is_current %}
     <details>
-      <summary>Weitere Aktionen</summary>
+      <summary>{{ _("Weitere Aktionen") }}</summary>
       <div class="stack">
         {% if edition.links_count == 0 %}
         <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, Ausgabe {{ edition.number }} mit ihren Dateien endgültig löschen.</span></label>
-          <button class="btn btn-danger btn-small" type="submit">Ausgabe löschen</button>
+          <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>{{ _("Ja, Ausgabe %(n)s mit ihren Dateien endgültig löschen.", n=edition.number) }}</span></label>
+          <button class="btn btn-danger btn-small" type="submit">{{ _("Ausgabe löschen") }}</button>
         </form>
         {% else %}
-        <p class="muted small">Diese Ausgabe kann nicht gelöscht werden, solange Links an sie gebunden sind.</p>
+        <p class="muted small">{{ _("Diese Ausgabe kann nicht gelöscht werden, solange Links an sie gebunden sind.") }}</p>
         {% endif %}
       </div>
     </details>
@@ -206,11 +206,11 @@
     {% set others = book.links.total - edition.links_count %}
     {% if others > 0 %}
     <details>
-      <summary>Links früherer Ausgaben auf diese Ausgabe umstellen</summary>
+      <summary>{{ _("Links früherer Ausgaben auf diese Ausgabe umstellen") }}</summary>
       <form method="post" action="/admin/books/{{ book.id }}/editions/{{ edition.id }}/migrate-links">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Ja, alle nicht widerrufenen Links dieses Buchs sollen ab sofort Ausgabe {{ edition.number }} liefern.</span></label>
-        <button class="btn btn-secondary btn-small" type="submit">Links umstellen</button>
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>{{ _("Ja, alle nicht widerrufenen Links dieses Buchs sollen ab sofort Ausgabe %(n)s liefern.", n=edition.number) }}</span></label>
+        <button class="btn btn-secondary btn-small" type="submit">{{ _("Links umstellen") }}</button>
       </form>
     </details>
     {% endif %}
@@ -220,23 +220,23 @@
 
   {% if not book.draft_edition %}
   <div class="edition">
-    <h3>Neue Ausgabe vorbereiten</h3>
+    <h3>{{ _("Neue Ausgabe vorbereiten") }}</h3>
     <form method="post" action="/admin/books/{{ book.id }}/editions">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="field">
-        <label for="note">Interne Notiz <span class="muted">(optional)</span></label>
-        <input id="note" name="note" type="text" maxlength="500" placeholder="z. B. Tippfehler in Kapitel 3 korrigiert">
+        <label for="note">{{ _("Interne Notiz") }} <span class="muted">{{ _("(optional)") }}</span></label>
+        <input id="note" name="note" type="text" maxlength="500" placeholder="{{ _('z. B. Tippfehler in Kapitel 3 korrigiert') }}">
       </div>
       {% if book.current_edition and book.current_edition.files %}
       <fieldset>
-        <legend>Unveränderte Dateien aus Ausgabe {{ book.current_edition.number }} übernehmen</legend>
+        <legend>{{ _("Unveränderte Dateien aus Ausgabe %(n)s übernehmen", n=book.current_edition.number) }}</legend>
         {% for file in book.current_edition.files %}
         <label class="check"><input type="checkbox" name="copy_formats" value="{{ file.format }}"> <span>{{ file.format | upper }} ({{ file.original_filename }}, {{ file.size_bytes | filesize }})</span></label>
         {% endfor %}
-        <p class="hint">Übernommene Dateien kannst du im Entwurf jederzeit durch neue ersetzen.</p>
+        <p class="hint">{{ _("Übernommene Dateien kannst du im Entwurf jederzeit durch neue ersetzen.") }}</p>
       </fieldset>
       {% endif %}
-      <button class="btn btn-secondary" type="submit">Entwurf anlegen</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Entwurf anlegen") }}</button>
     </form>
   </div>
   {% endif %}
@@ -244,46 +244,46 @@
 
 <section class="card" aria-labelledby="h-links">
   <div class="page-head">
-    <h2 id="h-links">Downloadlinks dieses Buchs</h2>
-    <a href="/admin/links?book_id={{ book.id }}">Alle {{ links.total }} anzeigen</a>
+    <h2 id="h-links">{{ _("Downloadlinks dieses Buchs") }}</h2>
+    <a href="/admin/links?book_id={{ book.id }}">{{ _("Alle %(n)s anzeigen", n=links.total) }}</a>
   </div>
   {% if links["items"] %}
   <div class="table-wrap">
     <table class="responsive">
-      <thead><tr><th scope="col">Bezeichnung</th><th scope="col">Ausgabe</th><th scope="col">Zustand</th><th scope="col" class="num">Downloads</th><th scope="col">Erstellt</th></tr></thead>
+      <thead><tr><th scope="col">{{ _("Bezeichnung") }}</th><th scope="col">{{ _("Ausgabe") }}</th><th scope="col">{{ _("Zustand") }}</th><th scope="col" class="num">{{ _("Downloads") }}</th><th scope="col">{{ _("Erstellt") }}</th></tr></thead>
       <tbody>
         {% for link in links["items"] %}
         <tr>
-          <td class="primary"><a href="/admin/links/{{ link.id }}">{{ link.label or "Ohne Bezeichnung" }}</a></td>
-          <td data-label="Ausgabe">Nr. {{ link.edition_number }}</td>
-          <td data-label="Zustand">{{ state_badge(link.state) }}</td>
-          <td data-label="Downloads" class="num">{{ link.download_count }}{% if link.max_downloads %} / {{ link.max_downloads }}{% endif %}</td>
-          <td data-label="Erstellt">{{ link.created_at | dt }}</td>
+          <td class="primary"><a href="/admin/links/{{ link.id }}">{{ link.label or _("Ohne Bezeichnung") }}</a></td>
+          <td data-label="{{ _('Ausgabe') }}">{{ _("Nr. %(n)s", n=link.edition_number) }}</td>
+          <td data-label="{{ _('Zustand') }}">{{ state_badge(link.state) }}</td>
+          <td data-label="{{ _('Downloads') }}" class="num">{{ link.download_count }}{% if link.max_downloads %} / {{ link.max_downloads }}{% endif %}</td>
+          <td data-label="{{ _('Erstellt') }}">{{ link.created_at | dt }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <p class="muted">Noch keine Links.</p>
+  <p class="muted">{{ _("Noch keine Links.") }}</p>
   {% endif %}
 </section>
 
 <section class="card" aria-labelledby="h-danger">
-  <h2 id="h-danger">Archivieren oder löschen</h2>
+  <h2 id="h-danger">{{ _("Archivieren oder löschen") }}</h2>
   <div class="row">
     <form method="post" action="/admin/books/{{ book.id }}/archive">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       {% if book.status == "active" %}
       <input type="hidden" name="archived" value="1">
-      <button class="btn btn-secondary" type="submit">Archivieren</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Archivieren") }}</button>
       {% else %}
       <input type="hidden" name="archived" value="0">
-      <button class="btn btn-secondary" type="submit">Wieder aktivieren</button>
+      <button class="btn btn-secondary" type="submit">{{ _("Wieder aktivieren") }}</button>
       {% endif %}
     </form>
-    <a class="btn btn-danger" href="/admin/books/{{ book.id }}/delete">Löschen …</a>
+    <a class="btn btn-danger" href="/admin/books/{{ book.id }}/delete">{{ _("Löschen …") }}</a>
   </div>
-  <p class="hint">Archivierte Bücher erscheinen nicht mehr in der Standardliste und erhalten keine neuen Links. Bestehende Links funktionieren weiter. Vor dem Löschen siehst du, welche Links ungültig werden.</p>
+  <p class="hint">{{ _("Archivierte Bücher erscheinen nicht mehr in der Standardliste und erhalten keine neuen Links. Bestehende Links funktionieren weiter. Vor dem Löschen siehst du, welche Links ungültig werden.") }}</p>
 </section>
 {% endblock %}

@@ -15,10 +15,12 @@ from starlette.responses import RedirectResponse, Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
+from .. import i18n
 from ..backup import BackupManager
 from ..config import Settings, load_settings
 from ..db import migrate, open_db
 from ..errors import AppError
+from ..i18n import _
 from ..logging_setup import configure_logging
 from ..ratelimit import RateLimiter
 from ..services import auth, misc
@@ -134,12 +136,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException) -> Response:
         messages = {
-            404: "Diese Seite gibt es nicht.",
-            405: "Diese Aktion ist hier nicht möglich.",
-            413: "Die hochgeladenen Daten sind zu groß.",
+            404: _("Diese Seite gibt es nicht."),
+            405: _("Diese Aktion ist hier nicht möglich."),
+            413: _("Die hochgeladenen Daten sind zu groß."),
         }
+        default = _("Die Anfrage konnte nicht verarbeitet werden.")
         info = ErrorInfo(
-            message=messages.get(exc.status_code, "Die Anfrage konnte nicht verarbeitet werden."),
+            message=messages.get(exc.status_code, default),
             code=f"http_{exc.status_code}",
             fields=[],
             status_code=exc.status_code,
@@ -154,11 +157,11 @@ def _error_page(request: Request, info: ErrorInfo, headers: dict[str, str] | Non
     template = "admin/error.html" if in_admin else "buyer/state.html"
     context = {
         "nav": "",
-        "title": f"Fehler {info.status_code}",
+        "title": _("Fehler %(code)s", code=info.status_code),
         "message": info.message,
         "state": "error",
-        "lang": buyer_texts.DEFAULT_LANGUAGE,
-        "t": buyer_texts.TEXTS[buyer_texts.DEFAULT_LANGUAGE],
+        "lang": i18n.current(),
+        "t": buyer_texts.TEXTS[i18n.current()],
     }
     response = admin.render(
         request,

@@ -13,6 +13,7 @@ from typing import Any
 from ..config import MB, Settings
 from ..db import iso, now_iso, now_utc, parse_iso, transaction
 from ..errors import Conflict, Invalid, field_error
+from ..i18n import _
 from ..schemas import SettingsUpdate
 
 DEFAULT_MESSAGE_TEMPLATE = """Hallo {name},
@@ -130,13 +131,18 @@ def update_settings(conn: sqlite3.Connection, settings: Settings, data: Settings
         if getattr(data, name) > hard:
             raise field_error(
                 name,
-                f"Höchstens {hard} MB möglich (Obergrenze MAX_UPLOAD_MB der Installation).",
+                _(
+                    "Höchstens %(limit)s MB möglich (Obergrenze MAX_UPLOAD_MB der Installation).",
+                    limit=hard,
+                ),
             )
     if "{link}" not in data.message_template:
-        raise field_error("message_template", "Die Vorlage muss den Platzhalter {link} enthalten.")
+        raise field_error(
+            "message_template", _("Die Vorlage muss den Platzhalter {link} enthalten.")
+        )
     if data.message_template_en is not None and "{link}" not in data.message_template_en:
         raise field_error(
-            "message_template_en", "Die Vorlage muss den Platzhalter {link} enthalten."
+            "message_template_en", _("Die Vorlage muss den Platzhalter {link} enthalten.")
         )
     with transaction(conn):
         _set(conn, "max_pdf_mb", str(data.max_pdf_mb))
@@ -193,8 +199,10 @@ def idempotency_begin(
     """
     if not IDEMPOTENCY_KEY_RE.match(key):
         raise Invalid(
-            "Der Idempotency-Key muss aus 16 bis 200 druckbaren ASCII-Zeichen bestehen "
-            "(empfohlen: eine zufällige UUID).",
+            _(
+                "Der Idempotency-Key muss aus 16 bis 200 druckbaren ASCII-Zeichen bestehen "
+                "(empfohlen: eine zufällige UUID)."
+            ),
             code="idempotency_key_invalid",
         )
     hashed = _key_hash(scope, key)
@@ -210,7 +218,7 @@ def idempotency_begin(
         if row is not None:
             if row["request_hash"] != fingerprint:
                 raise Invalid(
-                    "Dieser Idempotency-Key wurde bereits für eine andere Anfrage verwendet.",
+                    _("Dieser Idempotency-Key wurde bereits für eine andere Anfrage verwendet."),
                     code="idempotency_key_reused",
                 )
             if row["state"] == "done":
@@ -222,7 +230,7 @@ def idempotency_begin(
             stale = iso(now - timedelta(minutes=IN_PROGRESS_TIMEOUT_MINUTES))
             if row["created_at"] >= stale:
                 raise Conflict(
-                    "Eine Anfrage mit diesem Idempotency-Key wird gerade verarbeitet.",
+                    _("Eine Anfrage mit diesem Idempotency-Key wird gerade verarbeitet."),
                     code="idempotency_in_progress",
                     headers={"Retry-After": "5"},
                 )
@@ -284,9 +292,9 @@ def download_stats(
     date_to = date_to or today
     date_from = date_from or (date_to - timedelta(days=29))
     if date_from > date_to:
-        raise field_error("date_from", "Das Startdatum liegt nach dem Enddatum.")
+        raise field_error("date_from", _("Das Startdatum liegt nach dem Enddatum."))
     if (date_to - date_from).days > 731:
-        raise field_error("date_from", "Der Zeitraum darf höchstens zwei Jahre umfassen.")
+        raise field_error("date_from", _("Der Zeitraum darf höchstens zwei Jahre umfassen."))
 
     where = ["e.created_at >= :start", "e.created_at < :end"]
     params: dict[str, Any] = {

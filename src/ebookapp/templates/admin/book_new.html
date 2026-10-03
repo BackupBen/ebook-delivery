@@ -1,43 +1,43 @@
 {% extends "admin/base.html" %}
 {% from "admin/_macros.html" import field_error, invalid %}
-{% block title %}Neues Buch{% endblock %}
+{% block title %}{{ _("Neues Buch") }}{% endblock %}
 {% block main_class %}narrow{% endblock %}
 {% block content %}
-<p class="breadcrumb"><a href="/admin/books">Bücher</a> › Neues Buch</p>
-<h1>Neues Buch</h1>
+<p class="breadcrumb"><a href="/admin/books">{{ _("Bücher") }}</a> › {{ _("Neues Buch") }}</p>
+<h1>{{ _("Neues Buch") }}</h1>
 <form class="card" method="post" action="/admin/books">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <div class="field">
-    <label for="title">Titel</label>
+    <label for="title">{{ _("Titel") }}</label>
     <input id="title" name="title" type="text" required maxlength="200" value="{{ values.title or '' }}" {{ invalid(error, "title") }}>
     {{ field_error(error, "title") }}
   </div>
   <div class="field">
-    <label for="description">Beschreibung <span class="muted">(optional)</span></label>
+    <label for="description">{{ _("Beschreibung") }} <span class="muted">{{ _("(optional)") }}</span></label>
     <textarea id="description" name="description" maxlength="5000" {{ invalid(error, "description") }}>{{ values.description or '' }}</textarea>
-    <p class="hint">Wird auf der Downloadseite unter dem Titel angezeigt.</p>
+    <p class="hint">{{ _("Wird auf der Downloadseite unter dem Titel angezeigt.") }}</p>
     {{ field_error(error, "description") }}
   </div>
   <div class="field">
-    <label for="language">Sprache</label>
+    <label for="language">{{ _("Sprache") }}</label>
     <select id="language" name="language" {{ invalid(error, "language") }}>
       {% for code, label in LANGUAGE_LABELS.items() %}
-      <option value="{{ code }}"{% if (values.language or "de") == code %} selected{% endif %}>{{ label }}</option>
+      <option value="{{ code }}"{% if (values.language or "de") == code %} selected{% endif %}>{{ _(label) }}</option>
       {% endfor %}
     </select>
-    <p class="hint">Bestimmt die Sprache der Downloadseite und der Versandnachricht.</p>
+    <p class="hint">{{ _("Bestimmt die Sprache der Downloadseite und der Versandnachricht.") }}</p>
     {{ field_error(error, "language") }}
   </div>
   <div class="field">
-    <label for="whop_product_id">Whop-Produkt-ID <span class="muted">(optional)</span></label>
+    <label for="whop_product_id">{{ _("Whop-Produkt-ID") }} <span class="muted">{{ _("(optional)") }}</span></label>
     <input id="whop_product_id" name="whop_product_id" type="text" maxlength="70" placeholder="prod_…" value="{{ values.whop_product_id or '' }}" autocapitalize="none" spellcheck="false" {{ invalid(error, "whop_product_id") }}>
-    <p class="hint">Ordnet Zahlungen aus Whop diesem Buch zu: Käufer erhalten den Link dann automatisch per E-Mail.</p>
+    <p class="hint">{{ _("Ordnet Zahlungen aus Whop diesem Buch zu: Käufer erhalten den Link dann automatisch per E-Mail.") }}</p>
     {{ field_error(error, "whop_product_id") }}
   </div>
   <div class="row">
-    <button class="btn" type="submit">Buch anlegen</button>
-    <a class="btn btn-secondary" href="/admin/books">Abbrechen</a>
+    <button class="btn" type="submit">{{ _("Buch anlegen") }}</button>
+    <a class="btn btn-secondary" href="/admin/books">{{ _("Abbrechen") }}</a>
   </div>
-  <p class="hint">Dateien und Cover lädst du im nächsten Schritt hoch.</p>
+  <p class="hint">{{ _("Dateien und Cover lädst du im nächsten Schritt hoch.") }}</p>
 </form>
 {% endblock %}

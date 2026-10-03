@@ -14,6 +14,7 @@ from ..backup import BackupManager
 from ..config import Settings
 from ..db import connect
 from ..errors import AppError, Forbidden
+from ..i18n import _
 from ..ratelimit import RateLimiter
 from ..schemas import validation_fields
 from ..security import normalize_ip
@@ -100,10 +101,10 @@ def check_same_origin(request: Request, settings: Settings) -> None:
     """CSRF-Schutz, erste Stufe: schreibende Anfragen müssen von der eigenen Seite kommen."""
     site = request.headers.get("sec-fetch-site")
     if site is not None and site not in {"same-origin", "none"}:
-        raise Forbidden("Anfrage von einer fremden Seite abgelehnt.", code="csrf_origin")
+        raise Forbidden(_("Anfrage von einer fremden Seite abgelehnt."), code="csrf_origin")
     origin = request.headers.get("origin")
     if origin is not None and origin != base_url(request, settings):
-        raise Forbidden("Anfrage von einer fremden Seite abgelehnt.", code="csrf_origin")
+        raise Forbidden(_("Anfrage von einer fremden Seite abgelehnt."), code="csrf_origin")
 
 
 @dataclass
@@ -124,7 +125,7 @@ def error_info(exc: Exception) -> ErrorInfo:
     if isinstance(exc, ValidationError):
         fields = validation_fields(exc)
         return ErrorInfo(
-            message="Bitte prüfe die markierten Angaben.",
+            message=_("Bitte prüfe die markierten Angaben."),
             code="validation_error",
             fields=fields,
             status_code=422,

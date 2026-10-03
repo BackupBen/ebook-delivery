@@ -20,9 +20,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse, RedirectResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from .. import __version__
+from .. import __version__, i18n
 from ..db import open_db
 from ..errors import AppError, Forbidden, RateLimited, Unauthorized, field_error
+from ..i18n import _
 from ..schemas import (
     BookCreate,
     BookList,
@@ -134,8 +135,10 @@ def _check_key(context: AppContext, request: Request) -> dict[str, Any]:
     settings = context.settings
     if any(name in request.query_params for name in URL_CREDENTIAL_PARAMS):
         raise AppError(
-            "Zugangsdaten dürfen nicht in der URL stehen. Verwende den Header "
-            "Authorization: Bearer <API_KEY>.",
+            _(
+                "Zugangsdaten dürfen nicht in der URL stehen. Verwende den Header "
+                "Authorization: Bearer <API_KEY>."
+            ),
             code="credentials_in_url",
         )
     address = rate_key(client_ip(request, settings))
@@ -143,11 +146,11 @@ def _check_key(context: AppContext, request: Request) -> dict[str, Any]:
     wait = context.limiter.retry_after(fail_key, 20, 600)
     if wait:
         raise RateLimited(
-            "Zu viele fehlgeschlagene Anmeldungen. Bitte später erneut versuchen.",
+            _("Zu viele fehlgeschlagene Anmeldungen. Bitte später erneut versuchen."),
             headers={"Retry-After": str(wait)},
         )
     header = request.headers.get("authorization", "")
-    scheme, _, token = header.partition(" ")
+    scheme, _sep, token = header.partition(" ")
     key = None
     if scheme.lower() == "bearer" and token.strip():
         with open_db(settings.db_path) as conn:
@@ -156,17 +159,17 @@ def _check_key(context: AppContext, request: Request) -> dict[str, Any]:
         if header:
             context.limiter.record(fail_key, 600)
         raise Unauthorized(
-            "API-Schlüssel fehlt oder ist ungültig.", headers={"WWW-Authenticate": "Bearer"}
+            _("API-Schlüssel fehlt oder ist ungültig."), headers={"WWW-Authenticate": "Bearer"}
         )
     wait = context.limiter.hit(f"api:{key['id']}", settings.api_rate_per_minute, 60)
     if wait:
         raise RateLimited(
-            "Rate Limit erreicht. Bitte kurz warten.", headers={"Retry-After": str(wait)}
+            _("Rate Limit erreicht. Bitte kurz warten."), headers={"Retry-After": str(wait)}
         )
     content_type = request.headers.get("content-type", "")
     if content_type.startswith("multipart/form-data") and "files:write" not in key["scopes"]:
         raise Forbidden(
-            "Diesem API-Schlüssel fehlt die Berechtigung „files:write“.",
+            _("Diesem API-Schlüssel fehlt die Berechtigung „%(scope)s“.", scope="files:write"),
             code="insufficient_scope",
             details={"required_scope": "files:write"},
         )
@@ -217,7 +220,7 @@ def authenticate(
     key = getattr(request.state, "api_key", None)
     if key is None:  # pragma: no cover - die Schranke läuft immer vorher
         raise Unauthorized(
-            "API-Schlüssel fehlt oder ist ungültig.", headers={"WWW-Authenticate": "Bearer"}
+            _("API-Schlüssel fehlt oder ist ungültig."), headers={"WWW-Authenticate": "Bearer"}
         )
     return key
 
@@ -226,7 +229,7 @@ def require(scope: str) -> Callable[..., dict[str, Any]]:
     def dependency(key: dict[str, Any] = Depends(authenticate)) -> dict[str, Any]:
         if scope not in key["scopes"]:
             raise Forbidden(
-                f"Diesem API-Schlüssel fehlt die Berechtigung „{scope}“.",
+                _("Diesem API-Schlüssel fehlt die Berechtigung „%(scope)s“.", scope=scope),
                 code="insufficient_scope",
                 details={"required_scope": scope},
             )
@@ -312,7 +315,7 @@ def build_api(context: AppContext) -> FastAPI:
             {
                 "error": {
                     "code": "validation_error",
-                    "message": "Die Anfrage enthält ungültige Angaben.",
+                    "message": _("Die Anfrage enthält ungültige Angaben."),
                     "fields": fields,
                 }
             },
@@ -323,9 +326,9 @@ def build_api(context: AppContext) -> FastAPI:
     async def http_error(request: Request, exc: StarletteHTTPException) -> Response:
         codes = {404: "not_found", 405: "method_not_allowed", 413: "payload_too_large"}
         messages = {
-            404: "Diesen Endpunkt gibt es nicht.",
-            405: "Diese Methode ist hier nicht erlaubt.",
-            413: "Die Anfrage ist zu groß.",
+            404: _("Diesen Endpunkt gibt es nicht."),
+            405: _("Diese Methode ist hier nicht erlaubt."),
+            413: _("Die Anfrage ist zu groß."),
         }
         return JSONResponse(
             {
@@ -345,7 +348,7 @@ def build_api(context: AppContext) -> FastAPI:
             {
                 "error": {
                     "code": "internal_error",
-                    "message": "Unerwarteter Serverfehler. Bitte die Fehler-ID angeben.",
+                    "message": _("Unerwarteter Serverfehler. Bitte die Fehler-ID angeben."),
                     "request_id": getattr(request.state, "request_id", ""),
                 }
             },
@@ -371,8 +374,8 @@ def build_api(context: AppContext) -> FastAPI:
             if header.lower().startswith("bearer "):
                 allowed = auth.authenticate_api_key(conn, header[7:].strip()) is not None
         if not allowed:
-            raise Unauthorized("Anmeldung erforderlich.", headers={"WWW-Authenticate": "Bearer"})
-        return JSONResponse(api.openapi())
+            raise Unauthorized(_("Anmeldung erforderlich."), headers={"WWW-Authenticate": "Bearer"})
+        return JSONResponse(i18n.translate_openapi(api.openapi()))
 
     @api.get("/docs", include_in_schema=False)
     def docs(request: Request, session: dict = Depends(admin.require_admin)) -> Response:
@@ -651,7 +654,9 @@ def build_api(context: AppContext) -> FastAPI:
         c = ctx(request)
         uploads = {fmt: item for fmt, item in (("pdf", pdf), ("epub", epub)) if item is not None}
         if not uploads:
-            raise field_error("pdf", "Es wurde keine Datei übergeben (Felder pdf und/oder epub).")
+            raise field_error(
+                "pdf", _("Es wurde keine Datei übergeben (Felder pdf und/oder epub).")
+            )
 
         def action() -> Any:
             limits = misc.get_limits(conn, c.settings)
@@ -721,8 +726,10 @@ def build_api(context: AppContext) -> FastAPI:
         data = data or EditionPublish()
         if data.existing_links == "migrate" and "links:manage" not in key["scopes"]:
             raise Forbidden(
-                "Das Umstellen bestehender Links erfordert zusätzlich die Berechtigung "
-                "„links:manage“.",
+                _(
+                    "Das Umstellen bestehender Links erfordert zusätzlich die Berechtigung "
+                    "„links:manage“."
+                ),
                 code="insufficient_scope",
                 details={"required_scope": "links:manage"},
             )

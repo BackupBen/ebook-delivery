@@ -1,38 +1,38 @@
 {% set FIELD_LABELS = {
-  "title": "Titel", "description": "Beschreibung", "whop_product_id": "Whop-Produkt-ID",
-  "pdf": "PDF", "epub": "EPUB", "cover": "Cover", "format": "Format",
-  "book_id": "Buch", "edition_id": "Ausgabe", "label": "Bezeichnung", "formats": "Formate",
-  "expires_at": "Ablaufdatum", "max_downloads": "Downloadlimit",
-  "existing_links": "Bestehende Links", "copy_formats": "Dateien übernehmen", "note": "Notiz",
-  "confirm": "Bestätigung", "name": "Name", "scopes": "Berechtigungen",
-  "max_pdf_mb": "Maximale PDF-Größe", "max_epub_mb": "Maximale EPUB-Größe",
-  "max_cover_mb": "Maximale Cover-Größe", "message_template": "Versandnachricht", "message_template_en": "Versandnachricht (Englisch)", "language": "Sprache", "email": "E-Mail-Adresse", "mail_subject": "Betreff", "mail_subject_en": "Betreff (Englisch)",
-  "current_password": "Aktuelles Passwort", "new_password": "Neues Passwort",
-  "new_password_repeat": "Neues Passwort (Wiederholung)", "code": "Link oder Code"
+  "title": N_("Titel"), "description": N_("Beschreibung"), "whop_product_id": N_("Whop-Produkt-ID"),
+  "pdf": "PDF", "epub": "EPUB", "cover": N_("Cover"), "format": N_("Format"),
+  "book_id": N_("Buch"), "edition_id": N_("Ausgabe"), "label": N_("Bezeichnung"), "formats": N_("Formate"),
+  "expires_at": N_("Ablaufdatum"), "max_downloads": N_("Downloadlimit"),
+  "existing_links": N_("Bestehende Links"), "copy_formats": N_("Dateien übernehmen"), "note": N_("Notiz"),
+  "confirm": N_("Bestätigung"), "name": N_("Name"), "scopes": N_("Berechtigungen"),
+  "max_pdf_mb": N_("Maximale PDF-Größe"), "max_epub_mb": N_("Maximale EPUB-Größe"),
+  "max_cover_mb": N_("Maximale Cover-Größe"), "message_template": N_("Versandnachricht"), "message_template_en": N_("Versandnachricht (Englisch)"), "language": N_("Sprache"), "email": N_("E-Mail-Adresse"), "mail_subject": N_("Betreff"), "mail_subject_en": N_("Betreff (Englisch)"),
+  "current_password": N_("Aktuelles Passwort"), "new_password": N_("Neues Passwort"),
+  "new_password_repeat": N_("Neues Passwort (Wiederholung)"), "code": N_("Link oder Code")
 } %}
 
 {# Dauerhafte, kopierbare Fehlermeldung. Sie verschwindet nicht von selbst. #}
 {% macro error_box(error, request_id, now_text) %}
 {% if error %}
 <section class="alert alert-error" role="alert" aria-labelledby="error-title" id="error-box" tabindex="-1">
-  <h2 id="error-title">Das hat nicht geklappt</h2>
+  <h2 id="error-title">{{ _("Das hat nicht geklappt") }}</h2>
   <p>{{ error.message }}</p>
   {% if error.fields %}
   <ul>
     {% for item in error.fields %}
-    <li><strong>{{ FIELD_LABELS.get(item.field, item.field) }}:</strong> {{ item.message }}</li>
+    <li><strong>{{ _(FIELD_LABELS.get(item.field, item.field)) }}:</strong> {{ item.message }}</li>
     {% endfor %}
   </ul>
   {% endif %}
   <details>
-    <summary>Fehlertext zum Kopieren</summary>
-    <pre id="error-text">Fehler: {{ error.message }}
-{% for item in error.fields %}- {{ FIELD_LABELS.get(item.field, item.field) }}: {{ item.message }}
-{% endfor %}Code: {{ error.code }} (HTTP {{ error.status_code }})
-Zeit: {{ now_text }}
-Fehler-ID: {{ request_id }}</pre>
+    <summary>{{ _("Fehlertext zum Kopieren") }}</summary>
+    <pre id="error-text">{{ _("Fehler:") }} {{ error.message }}
+{% for item in error.fields %}- {{ _(FIELD_LABELS.get(item.field, item.field)) }}: {{ item.message }}
+{% endfor %}{{ _("Code:") }} {{ error.code }} (HTTP {{ error.status_code }})
+{{ _("Zeit:") }} {{ now_text }}
+{{ _("Fehler-ID:") }} {{ request_id }}</pre>
   </details>
-  <button type="button" class="btn btn-secondary btn-small" data-copy="error-text">Fehlertext kopieren</button>
+  <button type="button" class="btn btn-secondary btn-small" data-copy="error-text">{{ _("Fehlertext kopieren") }}</button>
 </section>
 {% endif %}
 {% endmacro %}
@@ -45,14 +45,14 @@ Fehler-ID: {{ request_id }}</pre>
 
 {% macro invalid(error, name) %}{% if error and error.by_field.get(name) %}aria-invalid="true" aria-describedby="err-{{ name }}"{% endif %}{% endmacro %}
 
-{% macro state_badge(state) %}<span class="badge badge-{{ state }}">{{ STATE_LABELS.get(state, state) }}</span>{% endmacro %}
+{% macro state_badge(state) %}<span class="badge badge-{{ state }}">{{ _(STATE_LABELS.get(state, state)) }}</span>{% endmacro %}
 
 {% macro pagination(result, page, page_size, base_query) %}
 {% if result.total > page_size %}
-<nav class="pagination" aria-label="Seiten">
-  <span>{% if page > 1 %}<a href="?{{ base_query }}&amp;page={{ page - 1 }}">← Zurück</a>{% endif %}</span>
-  <span class="muted">Seite {{ page }} von {{ ((result.total - 1) // page_size) + 1 }}</span>
-  <span>{% if page * page_size < result.total %}<a href="?{{ base_query }}&amp;page={{ page + 1 }}">Weiter →</a>{% endif %}</span>
+<nav class="pagination" aria-label="{{ _('Seiten') }}">
+  <span>{% if page > 1 %}<a href="?{{ base_query }}&amp;page={{ page - 1 }}">← {{ _("Zurück") }}</a>{% endif %}</span>
+  <span class="muted">{{ _("Seite %(page)s von %(pages)s", page=page, pages=((result.total - 1) // page_size) + 1) }}</span>
+  <span>{% if page * page_size < result.total %}<a href="?{{ base_query }}&amp;page={{ page + 1 }}">{{ _("Weiter") }} →</a>{% endif %}</span>
 </nav>
 {% endif %}
 {% endmacro %}
