@@ -823,9 +823,10 @@ details + details {
 }
 
 .qr svg {
+  display: block;
   height: auto;
-  max-width: 240px;
-  width: 100%;
+  max-width: 100%;
+  width: 220px;
 }
 
 .recovery-codes {

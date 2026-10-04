@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 import threading
 from collections.abc import AsyncIterator
@@ -96,6 +97,16 @@ def _filesize(value: int | None, language: str | None = None) -> str:
     return f"{value} Bytes"
 
 
+def _asset_version() -> str:
+    """Prüfsumme von CSS und JavaScript: Nach einem Update lädt der Browser sie neu, statt
+    eine zwischengespeicherte ältere Fassung zu verwenden."""
+    digest = hashlib.sha256()
+    static = resources.files("ebookapp") / "static"
+    for name in ("app.css", "app.js"):
+        digest.update((static / name).read_bytes())
+    return digest.hexdigest()[:12]
+
+
 def install_filters(settings_timezone: Any) -> None:
     def _dt(value: str | None, fmt: str | None = None) -> str:
         if not value:
@@ -118,6 +129,7 @@ def install_filters(settings_timezone: Any) -> None:
     templates.env.globals["N_"] = i18n.mark
     templates.env.globals["ui_lang"] = i18n.current
     templates.env.globals["UI_LANGUAGE_NAMES"] = i18n.LANGUAGE_NAMES
+    templates.env.globals["asset_version"] = _asset_version()
     templates.env.globals["SCOPE_LABELS"] = SCOPE_LABELS
     templates.env.globals["LANGUAGE_LABELS"] = LANGUAGE_LABELS
     templates.env.globals["app_version"] = __version__

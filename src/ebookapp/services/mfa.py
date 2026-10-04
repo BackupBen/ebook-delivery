@@ -155,7 +155,9 @@ def provisioning_uri(settings: Settings, username: str, secret_b32: str) -> str:
 def qr_svg(uri: str) -> str:
     import segno
 
-    return segno.make(uri, error="m").svg_inline(scale=5, border=2, dark="#000", light="#fff")
+    return segno.make(uri, error="m").svg_inline(
+        scale=5, border=2, dark="#000", light="#fff", omitsize=True
+    )
 
 
 def enable(
