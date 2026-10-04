@@ -98,6 +98,32 @@ möchte, lässt den Header bei `POST /links` weg.
 - Sicherheits-Header auf allen Seiten: strikte Content-Security-Policy ohne Inline-Skripte,
   `X-Frame-Options: DENY`, `nosniff`, HSTS, `X-Robots-Tag: noindex`.
 
+## Zwei-Faktor-Anmeldung
+
+- Unter **Sicherheit** einschaltbar: zeitbasierte Einmalcodes (TOTP, RFC 6238; SHA-1,
+  6 Ziffern, 30 Sekunden) aus jeder gängigen Authenticator-App. Das Geheimnis wird mit dem
+  `SECRET_KEY` verschlüsselt gespeichert.
+- Jeder Code gilt nur einmal (auch nicht innerhalb seines 30-Sekunden-Fensters erneut).
+- Nach richtigem Passwort hat der zweite Schritt fünf Versuche und fünf Minuten. Unabhängig
+  vom Anschluss sind je Benutzer höchstens zehn falsche Codes je Zeitfenster erlaubt: Auch wer
+  das Passwort kennt, kann die Codes nicht durchprobieren.
+- Zehn Notfall-Codes (je 50 Bit, nur als Prüfsumme gespeichert, jeweils einmal gültig).
+- Ausschalten und neue Notfall-Codes erfordern Passwort **und** Code.
+- Notausgang mit Zugriff auf den Server: `ebookctl disable-2fa` (beendet alle Sitzungen).
+
+## Sicherheitsprotokoll und Benachrichtigungen
+
+- Protokolliert werden Anmeldungen und Fehlversuche, Sperren, falsche Codes, Notfall-Codes,
+  Änderungen an Passwort, Zwei-Faktor-Anmeldung und Benachrichtigungen, erstellte und
+  widerrufene API-Schlüssel, gelöschte Bücher sowie abgelehnte API-Schlüssel und
+  Whop-Webhooks; jeweils mit Zeit, Benutzer, Adresse und Browser. Käufer werden nicht
+  protokolliert.
+- Warnereignisse werden je Anschluss gedrosselt (höchstens 20 je 10 Minuten und Art), damit
+  eine Anfrageflut das Protokoll nicht füllt. Einträge werden nach einem Jahr gelöscht,
+  höchstens 50 000 bleiben erhalten.
+- Optional E-Mail über Brevo bei jeder Anmeldung und/oder bei Warnzeichen (gleiche Warnung
+  höchstens alle 30 Minuten). Der Versand verzögert keine Anmeldung.
+
 ## Käuferseite
 
 - Keine Skripte, keine Formulare, keine Cookies, keine fremden Quellen.
@@ -185,6 +211,16 @@ gespeichert; sie erscheinen nicht im Log und nicht in der Bezeichnung des Links.
 - Interaktive Dokumentation und Spezifikation sind nur angemeldet erreichbar. Die
   Dokumentation lädt nichts von fremden Servern.
 
+## Lieferkette
+
+- Abhängigkeiten sind mit Prüfsummen gepinnt; Dependabot schlägt Updates wöchentlich vor.
+- Die CI prüft vor jeder Veröffentlichung die Python-Abhängigkeiten (pip-audit) und das
+  fertige Image (Trivy, kritische und hohe Schwachstellen mit verfügbarem Fix). Schlägt
+  die Prüfung fehl, wird kein Image veröffentlicht.
+- Der Prüf-Job hat nur Leserechte und keine Secrets; die Trivy-Action ist auf einen Commit
+  gepinnt (nach dem Lieferketten-Angriff auf Trivy im März 2026 wurden Versions-Tags
+  umgebogen).
+
 ## Container
 
 - Läuft als Benutzer 10001 ohne Root-Rechte und ohne Linux-Capabilities.
@@ -204,8 +240,6 @@ gespeichert; sie erscheinen nicht im Log und nicht in der Bezeichnung des Links.
   für einen Upload braucht. Das übernimmt der Reverse Proxy.
 - **Wiederherstellung dreht die Zeit zurück.** Nach dem Zurückspielen eines Backups sind
   danach widerrufene Links und API-Schlüssel wieder aktiv.
-- **Kein zweiter Faktor.** Die Verwaltung ist durch ein Passwort geschützt. Ein langes,
-  nur hier verwendetes Passwort ist Voraussetzung.
 - **Rückerstattungen.** Eine Erstattung in Whop widerruft den Link nicht automatisch.
 - **PDF-Prüfung.** Geprüft werden Kennung und Endmarke, nicht der innere Aufbau. Die App
   wertet PDFs nicht aus und liefert sie nur als Download.

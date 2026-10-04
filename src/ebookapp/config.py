@@ -146,6 +146,10 @@ class Settings:
         return "__Host-ebook_session" if self.cookie_secure else "ebook_session"
 
     @property
+    def mfa_cookie_name(self) -> str:
+        return "__Host-ebook_mfa" if self.cookie_secure else "ebook_mfa"
+
+    @property
     def login_csrf_cookie_name(self) -> str:
         return "__Host-ebook_login" if self.cookie_secure else "ebook_login"
 

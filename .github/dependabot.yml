@@ -1,0 +1,25 @@
+# Schlägt wöchentlich Updates als Pull Request vor. Jeder Vorschlag durchläuft die CI
+# (Tests und Sicherheitsscan), bevor er übernommen werden kann.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

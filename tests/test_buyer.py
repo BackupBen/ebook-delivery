@@ -433,8 +433,13 @@ def test_fingerprint_is_not_reversible_and_gets_removed(env: Env, admin) -> None
         grant = conn.execute("SELECT * FROM download_grants").fetchone()
         assert re.fullmatch(r"[0-9a-f]{32}", grant["client_hash"])
         dump = "\n".join(conn.iterdump())
+        # Das Sicherheitsprotokoll enthält bewusst Adresse und Browser von Anmeldungen an
+        # der Verwaltung, nie von Käufern.
+        buyer_tables = "\n".join(
+            line for line in conn.iterdump() if not line.startswith('INSERT INTO "security_events"')
+        )
     assert "Sehr-Eindeutiger-Browser" not in dump
-    assert "testclient" not in dump
+    assert "testclient" not in buyer_tables
 
     from ebookapp.services import misc
 

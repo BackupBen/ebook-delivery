@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _("Anmeldung bestätigen") }}{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ _("Anmeldung bestätigen") }}</h1>
+  {% if verify_error %}
+  <div class="alert alert-error" role="alert" id="error-box" tabindex="-1">
+    <p>{{ verify_error }}</p>
+  </div>
+  {% endif %}
+  <p>{{ _("Gib den 6-stelligen Code aus deiner Authenticator-App ein.") }}</p>
+  <form method="post" action="/admin/login/verify" autocomplete="off">
+    <div class="field">
+      <label for="code">{{ _("Bestätigungscode") }}</label>
+      <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required maxlength="40" autofocus spellcheck="false" autocapitalize="characters">
+      <p class="hint">{{ _("Kein Zugriff auf die App? Gib stattdessen einen deiner Notfall-Codes ein (z. B. ABCDE-FGHJK). Jeder Notfall-Code gilt nur einmal.") }}</p>
+    </div>
+    <button class="btn btn-block" type="submit">{{ _("Bestätigen") }}</button>
+  </form>
+  <p class="mt small"><a href="/admin/login">{{ _("Abbrechen und neu anmelden") }}</a></p>
+</div>
+{% endblock %}

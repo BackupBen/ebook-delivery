@@ -75,6 +75,29 @@ def cmd_set_password(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_disable_2fa(args: argparse.Namespace) -> int:
+    """Notausgang, wenn Authenticator-App und Notfall-Codes verloren sind."""
+    from .services import mfa, security_log
+
+    settings, _, _ = _context()
+    username = args.username or settings.admin_username
+    with open_db(settings.db_path) as conn:
+        row = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        if row is None:
+            print(f"Benutzer „{username}“ nicht gefunden.", file=sys.stderr)
+            return 1
+        mfa.disable(conn, row["id"])
+        conn.execute("DELETE FROM sessions WHERE user_id = ?", (row["id"],))
+        security_log.record(
+            conn, settings, "mfa_disabled", username=username, detail="ebookctl disable-2fa"
+        )
+    print(
+        f"Zwei-Faktor-Anmeldung für „{username}“ ausgeschaltet. Alle Sitzungen wurden beendet. "
+        "Bitte nach der Anmeldung neu einrichten."
+    )
+    return 0
+
+
 def cmd_backup(args: argparse.Namespace) -> int:
     _, _, backups = _context()
     results = backups.run("cli")
@@ -150,6 +173,10 @@ def main(argv: list[str] | None = None) -> int:
     password = sub.add_parser("set-password", help="Administrator-Passwort setzen")
     password.add_argument("--username")
     password.set_defaults(func=cmd_set_password)
+
+    disable_2fa = sub.add_parser("disable-2fa", help="Zwei-Faktor-Anmeldung ausschalten (Notfall)")
+    disable_2fa.add_argument("--username")
+    disable_2fa.set_defaults(func=cmd_disable_2fa)
 
     sub.add_parser("backup", help="Backup jetzt ausführen").set_defaults(func=cmd_backup)
 

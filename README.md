@@ -101,6 +101,7 @@ Im Container steht `ebookctl` zur Verfügung:
 | Befehl | Zweck |
 |---|---|
 | `ebookctl set-password` | Administrator-Passwort setzen (beendet alle Sitzungen) |
+| `ebookctl disable-2fa` | Zwei-Faktor-Anmeldung ausschalten, wenn App und Notfall-Codes verloren sind |
 | `ebookctl backup` | Backup sofort ausführen |
 | `ebookctl snapshots [--source offsite]` | Vorhandene Sicherungsstände auflisten |
 | `ebookctl backup-verify [--source offsite]` | Backup vollständig prüfen |

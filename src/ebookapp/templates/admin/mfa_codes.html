@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ _("Notfall-Codes") }}{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/security">{{ _("Sicherheit") }}</a> › {{ _("Notfall-Codes") }}</p>
+<h1>{{ _("Notfall-Codes") }}</h1>
+{% if first_setup %}
+<div class="alert alert-success" role="status">
+  <p>{{ _("Die Zwei-Faktor-Anmeldung ist eingeschaltet. Ab der nächsten Anmeldung wird nach dem Passwort ein Code abgefragt.") }}</p>
+</div>
+{% endif %}
+<div class="alert alert-warn" role="status">
+  <p><strong>{{ _("Bewahre diese Codes jetzt sicher auf, z. B. im Passwortmanager.") }}</strong> {{ _("Sie werden nur auf dieser Seite angezeigt. Jeder Code funktioniert genau einmal, wenn du keinen Zugriff auf die Authenticator-App hast. Frühere Notfall-Codes gelten nicht mehr.") }}</p>
+</div>
+<section class="card">
+  <label class="visually-hidden" for="recovery-codes">{{ _("Notfall-Codes") }}</label>
+  <textarea id="recovery-codes" class="mono recovery-codes" readonly rows="10">{{ codes | join("\n") }}</textarea>
+  <div class="row mt">
+    <button type="button" class="btn" data-copy="recovery-codes" data-copy-status="status-codes">{{ _("Codes kopieren") }}</button>
+    <a class="btn btn-secondary" href="/admin/security">{{ _("Fertig") }}</a>
+  </div>
+  <p class="copy-status" id="status-codes" role="status" aria-live="polite"></p>
+</section>
+{% endblock %}

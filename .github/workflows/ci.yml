@@ -42,9 +42,49 @@ jobs:
       - name: Tests
         run: pytest --show-capture=no
 
+  # Sicherheitsprüfung, bevor etwas veröffentlicht wird. Der Job hat bewusst nur
+  # Leserechte, keine Secrets und keine Zugangsdaten im Git-Checkout: Selbst ein
+  # manipuliertes Prüfwerkzeug (vgl. den Trivy-Vorfall im März 2026) fände hier nichts,
+  # was es stehlen oder veröffentlichen könnte. Fremde Actions sind auf Commits gepinnt.
+  scan:
+    name: Sicherheitsscan
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python-Abhängigkeiten auf bekannte Schwachstellen prüfen (pip-audit)
+        run: |
+          python -m pip install --quiet pip-audit==2.10.1
+          pip-audit -r requirements.txt --require-hashes --disable-pip --progress-spinner off
+      - uses: docker/setup-buildx-action@v3
+      - name: Image bauen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ebook-delivery:scan
+          cache-from: type=gha
+      - name: Image prüfen (Trivy, kritische und hohe Schwachstellen mit verfügbarem Fix)
+        # aquasecurity/trivy-action v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: ebook-delivery:scan
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          vuln-type: os,library
+          exit-code: "1"
+
   image:
     name: Image bauen und veröffentlichen
-    needs: test
+    needs: [test, scan]
     runs-on: ubuntu-24.04
     permissions:
       contents: read

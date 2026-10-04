@@ -341,6 +341,10 @@ def download_stats(
 def housekeeping(conn: sqlite3.Connection, settings: Settings) -> None:
     """Entfernt abgelaufene Sitzungen, Idempotenz-Einträge und Download-Fingerabdrücke."""
     now = now_utc()
+    from . import security_log
+
+    security_log.purge(conn)
+    conn.execute("DELETE FROM login_challenges WHERE expires_at < ?", (now_iso(),))
     # Erkannte Webhook-Zustellungen: Whop wiederholt höchstens etwa drei Tage lang.
     conn.execute(
         "DELETE FROM webhook_events WHERE received_at < ?", (iso(now - timedelta(days=30)),)

@@ -37,11 +37,12 @@ from ..schemas import (
     SettingsUpdate,
 )
 from ..security import constant_time_equal, new_token, rate_key, unwrap_code, wrap_code
-from ..services import auth, books, links, mail, misc, orders
+from ..services import auth, books, links, mail, mfa, misc, orders, security_log
 from ..validation import MEDIA_TYPES, EpubLimits, download_filename
 from .common import (
     AppContext,
     ErrorInfo,
+    audit,
     base_url,
     check_same_origin,
     client_ip,
@@ -315,20 +316,17 @@ async def login_submit(request: Request) -> Response:
     # Die Passwortprüfung ist absichtlich teuer (scrypt, ca. 64 MB). Mehr als zwei
     # gleichzeitige Prüfungen werden abgewiesen, damit eine Anfrageflut weder den
     # Arbeitsspeicher noch die übrigen Anfragen blockiert.
-    def attempt() -> str | bool | None:
+    def attempt() -> Any:
         if not _PASSWORD_SLOTS.acquire(blocking=False):
             return False
         try:
             with open_db(settings.db_path) as conn:
-                user = auth.authenticate(conn, username, password)
-                if user is None:
-                    return None
-                return auth.create_session(conn, settings, user["id"])
+                return auth.authenticate(conn, username, password)
         finally:
             _PASSWORD_SLOTS.release()
 
-    session_token = await run_in_threadpool(attempt)
-    if session_token is False:
+    user = await run_in_threadpool(attempt)
+    if user is False:
         response = _login_page(
             request,
             error=_(
@@ -339,8 +337,10 @@ async def login_submit(request: Request) -> Response:
         )
         response.headers["Retry-After"] = "3"
         return response
-    if session_token is None:
+    if user is None:
         auth.log.warning("Fehlgeschlagene Anmeldung von %s", ip)
+        with open_db(settings.db_path) as conn:
+            audit(request, conn, "login_failed", username=username)
         return _login_page(
             request,
             error=_("Benutzername oder Passwort ist falsch."),
@@ -348,7 +348,33 @@ async def login_submit(request: Request) -> Response:
             username=username,
         )
 
-    c.limiter.reset(user_key)
+    with open_db(settings.db_path) as conn:
+        if mfa.is_enabled(conn, user["id"]):
+            # Das Passwort stimmt; jetzt fehlt der zweite Faktor. Der Zähler für
+            # Anmeldeversuche wird erst nach vollständiger Anmeldung zurückgesetzt.
+            challenge = mfa.create_challenge(conn, user["id"])
+            response = redirect("/admin/login/verify")
+            response.set_cookie(
+                settings.mfa_cookie_name,
+                challenge,
+                max_age=mfa.CHALLENGE_MINUTES * 60,
+                httponly=True,
+                secure=settings.cookie_secure,
+                samesite="strict",
+                path="/",
+            )
+            return response
+        c.limiter.reset(user_key)
+        return _complete_login(request, conn, user, method="")
+
+
+def _complete_login(
+    request: Request, conn: sqlite3.Connection, user: Any, *, method: str
+) -> Response:
+    """Legt die Sitzung an, setzt die Cookies und protokolliert die Anmeldung."""
+    settings = ctx(request).settings
+    session_token = auth.create_session(conn, settings, user["id"])
+    audit(request, conn, "login_success", username=user["username"], detail=method)
     response = redirect("/admin/books")
     response.set_cookie(
         settings.session_cookie_name,
@@ -359,14 +385,99 @@ async def login_submit(request: Request) -> Response:
         samesite="lax",
         path="/",
     )
-    response.delete_cookie(
-        settings.login_csrf_cookie_name,
-        path="/",
-        secure=settings.cookie_secure,
-        httponly=True,
-        samesite="strict",
-    )
+    for name in (settings.login_csrf_cookie_name, settings.mfa_cookie_name):
+        response.delete_cookie(
+            name, path="/", secure=settings.cookie_secure, httponly=True, samesite="strict"
+        )
     return response
+
+
+def _verify_page(request: Request, *, error: str | None = None, status_code: int = 200) -> Response:
+    return render(
+        request, "admin/login_verify.html", {"verify_error": error}, status_code=status_code
+    )
+
+
+@router.get("/admin/login/verify")
+def login_verify_form(request: Request, conn: sqlite3.Connection = Depends(get_conn)) -> Response:
+    c = ctx(request)
+    if mfa.get_challenge(conn, request.cookies.get(c.settings.mfa_cookie_name, "")) is None:
+        return _login_page(
+            request,
+            error=_("Die Bestätigung ist abgelaufen. Bitte melde dich erneut an."),
+            status_code=401,
+        )
+    return _verify_page(request)
+
+
+@router.post("/admin/login/verify")
+async def login_verify_submit(request: Request) -> Response:
+    c = ctx(request)
+    settings = c.settings
+    try:
+        check_same_origin(request, settings)
+    except Forbidden:
+        return _login_page(request, error=_("Anfrage abgelehnt."), status_code=403)
+    async with request.form(max_files=0, max_fields=5) as form:
+        code = form_text(form, "code")[:40]
+    token = request.cookies.get(settings.mfa_cookie_name, "")
+
+    def check() -> Response:
+        with open_db(settings.db_path) as conn:
+            challenge = mfa.get_challenge(conn, token)
+            if challenge is None:
+                return _login_page(
+                    request,
+                    error=_("Die Bestätigung ist abgelaufen. Bitte melde dich erneut an."),
+                    status_code=401,
+                )
+            username = challenge["username"]
+            # Je Benutzer, unabhängig vom Anschluss: Auch wer das Passwort kennt, kann die
+            # Codes nicht durchprobieren.
+            user_key = f"mfa-user:{challenge['user_id']}"
+            window = settings.login_window_minutes * 60
+            wait = c.limiter.hit(user_key, settings.login_max_failures * 2, window)
+            if wait:
+                audit(request, conn, "login_blocked", username=username, detail="2FA")
+                mfa.drop_challenge(conn, token)
+                minutes = max(1, (wait + 59) // 60)
+                return _login_page(
+                    request,
+                    error=_(
+                        "Zu viele falsche Codes. Bitte in %(n)s Minuten erneut versuchen.",
+                        n=minutes,
+                    ),
+                    status_code=429,
+                )
+            method = mfa.verify(conn, settings, challenge["user_id"], code)
+            if method is None:
+                left = mfa.count_failure(conn, token)
+                audit(request, conn, "mfa_failed", username=username)
+                if left == 0:
+                    return _login_page(
+                        request,
+                        error=_("Zu viele falsche Codes. Bitte melde dich erneut an."),
+                        status_code=401,
+                    )
+                return _verify_page(
+                    request,
+                    error=_("Der Code ist falsch oder abgelaufen. Noch %(n)s Versuche.", n=left),
+                    status_code=401,
+                )
+            mfa.drop_challenge(conn, token)
+            c.limiter.reset(user_key)
+            address = rate_key(client_ip(request, settings))
+            c.limiter.reset(f"login-user:{address}:{username.lower()}")
+            if method == "recovery":
+                audit(request, conn, "recovery_code_used", username=username)
+            user = conn.execute(
+                "SELECT * FROM users WHERE id = ?", (challenge["user_id"],)
+            ).fetchone()
+            return _complete_login(
+                request, conn, user, method="2FA" if method == "totp" else _("Notfall-Code")
+            )
+
+    return await run_in_threadpool(check)
 
 
 @router.post("/admin/logout")
@@ -376,6 +487,7 @@ def logout(
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> Response:
     c = ctx(request)
+    audit(request, conn, "logout", username=post.session["username"])
     auth.destroy_session(conn, post.session["token"])
     response = redirect("/admin/login")
     response.delete_cookie(
@@ -643,6 +755,13 @@ def book_delete(
         except ValueError:
             expected = -1
         result = books.delete_book(conn, c.storage, book_id, expected)
+        audit(
+            request,
+            conn,
+            "book_deleted",
+            username=post.session["username"],
+            detail=f"{preview['title']} ({book_id})",
+        )
     except AppError as exc:
         if isinstance(exc, NotFound):
             raise
@@ -1259,6 +1378,7 @@ def settings_password(
         auth.change_password(conn, post.session["user_id"], data, post.session["token"])
     except (AppError, ValidationError) as exc:
         return _settings_page(request, conn, error=error_info(exc))
+    audit(request, conn, "password_changed", username=post.session["username"])
     flash(conn, post.session, "success", _("Passwort geändert. Andere Sitzungen wurden beendet."))
     return redirect("/admin/settings")
 
@@ -1277,6 +1397,13 @@ def api_key_create(
         key, secret = auth.create_api_key(conn, ApiKeyCreate.model_validate(values))
     except (AppError, ValidationError) as exc:
         return _settings_page(request, conn, error=error_info(exc), values=values)
+    audit(
+        request,
+        conn,
+        "api_key_created",
+        username=post.session["username"],
+        detail=f"{key['name']} ({', '.join(key['scopes'])})",
+    )
     return render(
         request,
         "admin/apikey_created.html",
@@ -1298,6 +1425,7 @@ def api_key_revoke(
         auth.revoke_api_key(conn, key_id)
     except AppError as exc:
         return _settings_page(request, conn, error=error_info(exc))
+    audit(request, conn, "api_key_revoked", username=post.session["username"], detail=key_id)
     flash(conn, post.session, "success", _("API-Schlüssel widerrufen."))
     return redirect("/admin/settings")
 
@@ -1574,3 +1702,238 @@ def set_ui_language(request: Request, language: str) -> Response:
         samesite="lax",
     )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Sicherheit: Zwei-Faktor-Anmeldung, Benachrichtigungen, Protokoll
+# ---------------------------------------------------------------------------
+
+
+def _security_page(
+    request: Request,
+    conn: sqlite3.Connection,
+    session: dict[str, Any],
+    *,
+    error: ErrorInfo | None = None,
+    values: dict[str, Any] | None = None,
+    status_code: int = 200,
+) -> Response:
+    c = ctx(request)
+    warnings_only = request.query_params.get("filter") == "warnings"
+    page, offset = _page(request)
+    return render(
+        request,
+        "admin/security.html",
+        {
+            "nav": "security",
+            "mfa": mfa.status(conn, session["user_id"]),
+            "alerts": security_log.alert_settings(conn),
+            "mail_configured": c.settings.mail_configured,
+            "events": security_log.list_events(
+                conn, warnings_only=warnings_only, limit=PAGE_SIZE, offset=offset
+            ),
+            "recent_warnings": security_log.recent_warnings(conn),
+            "warnings_only": warnings_only,
+            "page": page,
+            "page_size": PAGE_SIZE,
+            "values": values or {},
+        },
+        error=error,
+        status_code=status_code,
+    )
+
+
+def _require_password(conn: sqlite3.Connection, session: dict[str, Any], password: str) -> None:
+    if not password or auth.authenticate(conn, session["username"], password) is None:
+        raise field_error("current_password", _("Das Passwort ist falsch."))
+
+
+def _require_code(
+    conn: sqlite3.Connection, settings: Any, session: dict[str, Any], code: str
+) -> str:
+    method = mfa.verify(conn, settings, session["user_id"], code)
+    if method is None:
+        raise field_error("code", _("Der Code ist falsch oder abgelaufen."))
+    return method
+
+
+@router.get("/admin/security")
+def security_page(
+    request: Request,
+    session: dict = Depends(require_admin),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    return _security_page(request, conn, session)
+
+
+@router.post("/admin/security/mfa/setup")
+def mfa_setup_start(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    if mfa.is_enabled(conn, post.session["user_id"]):
+        return redirect("/admin/security")
+    mfa.begin_setup(conn, c.settings, post.session["user_id"])
+    return redirect("/admin/security/mfa/setup")
+
+
+def _mfa_setup_page(
+    request: Request,
+    conn: sqlite3.Connection,
+    session: dict[str, Any],
+    *,
+    error: ErrorInfo | None = None,
+) -> Response:
+    c = ctx(request)
+    secret = mfa.pending_secret(conn, c.settings, session["user_id"])
+    if secret is None or mfa.is_enabled(conn, session["user_id"]):
+        return redirect("/admin/security")
+    uri = mfa.provisioning_uri(c.settings, session["username"], secret)
+    grouped = " ".join(secret[i : i + 4] for i in range(0, len(secret), 4))
+    return render(
+        request,
+        "admin/mfa_setup.html",
+        {"nav": "security", "secret": grouped, "qr_svg": mfa.qr_svg(uri), "uri": uri},
+        error=error,
+    )
+
+
+@router.get("/admin/security/mfa/setup")
+def mfa_setup_page(
+    request: Request,
+    session: dict = Depends(require_admin),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    return _mfa_setup_page(request, conn, session)
+
+
+@router.post("/admin/security/mfa/enable")
+def mfa_enable(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    try:
+        _require_password(conn, post.session, form_text(post.form, "current_password"))
+        codes = mfa.enable(conn, c.settings, post.session["user_id"], form_text(post.form, "code"))
+    except AppError as exc:
+        return _mfa_setup_page(request, conn, post.session, error=error_info(exc))
+    audit(request, conn, "mfa_enabled", username=post.session["username"])
+    return render(
+        request,
+        "admin/mfa_codes.html",
+        {"nav": "security", "codes": codes, "first_setup": True},
+    )
+
+
+@router.post("/admin/security/mfa/disable")
+def mfa_disable(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    try:
+        _require_password(conn, post.session, form_text(post.form, "current_password"))
+        _require_code(conn, c.settings, post.session, form_text(post.form, "code"))
+    except AppError as exc:
+        return _security_page(request, conn, post.session, error=error_info(exc))
+    mfa.disable(conn, post.session["user_id"])
+    audit(request, conn, "mfa_disabled", username=post.session["username"])
+    flash(conn, post.session, "success", _("Zwei-Faktor-Anmeldung ausgeschaltet."))
+    return redirect("/admin/security")
+
+
+@router.post("/admin/security/mfa/recovery")
+def mfa_recovery_codes(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    try:
+        _require_password(conn, post.session, form_text(post.form, "current_password"))
+        _require_code(conn, c.settings, post.session, form_text(post.form, "code"))
+    except AppError as exc:
+        return _security_page(request, conn, post.session, error=error_info(exc))
+    codes = mfa.new_recovery_codes(conn, post.session["user_id"])
+    audit(request, conn, "recovery_codes_renewed", username=post.session["username"])
+    return render(
+        request,
+        "admin/mfa_codes.html",
+        {"nav": "security", "codes": codes, "first_setup": False},
+    )
+
+
+@router.post("/admin/security/alerts")
+def security_alerts_save(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    email = form_text(post.form, "alert_email").strip()
+    on_login = form_text(post.form, "on_login") == "1"
+    on_warning = form_text(post.form, "on_warning") == "1"
+    values = {"alert_email": email, "on_login": on_login, "on_warning": on_warning}
+    try:
+        if email:
+            email = OrderEmail.model_validate({"email": email}).email
+        elif on_login or on_warning:
+            raise field_error(
+                "alert_email", _("Bitte eine E-Mail-Adresse für Benachrichtigungen angeben.")
+            )
+    except ValidationError:
+        return _security_page(
+            request,
+            conn,
+            post.session,
+            error=error_info(
+                field_error("alert_email", _("Bitte eine gültige E-Mail-Adresse angeben."))
+            ),
+            values=values,
+        )
+    except AppError as exc:
+        return _security_page(request, conn, post.session, error=error_info(exc), values=values)
+    security_log.save_alert_settings(
+        conn, email=email, on_login=on_login, on_warning=on_warning, language=i18n.current()
+    )
+    audit(request, conn, "alerts_changed", username=post.session["username"])
+    flash(conn, post.session, "success", _("Benachrichtigungen gespeichert."))
+    return redirect("/admin/security")
+
+
+@router.post("/admin/security/alerts/test")
+def security_alerts_test(
+    request: Request,
+    post: AdminPost = Depends(admin_post),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Response:
+    c = ctx(request)
+    if not security_log.alert_settings(conn)["email"]:
+        return _security_page(
+            request,
+            conn,
+            post.session,
+            error=error_info(
+                field_error("alert_email", _("Bitte zuerst eine E-Mail-Adresse speichern."))
+            ),
+        )
+    try:
+        security_log.send_test_alert(conn, c.settings)
+    except mail.MailError as exc:
+        return _security_page(
+            request,
+            conn,
+            post.session,
+            error=ErrorInfo(
+                message=_("Test-Benachrichtigung nicht versendet. %(error)s", error=str(exc)),
+                code="mail_failed",
+                fields=[],
+                status_code=502,
+            ),
+        )
+    flash(conn, post.session, "success", _("Test-Benachrichtigung versendet."))
+    return redirect("/admin/security")

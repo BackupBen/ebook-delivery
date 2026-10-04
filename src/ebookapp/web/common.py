@@ -140,3 +140,40 @@ def error_info(exc: Exception) -> ErrorInfo:
 def form_text(form: Any, name: str, default: str = "") -> str:
     value = form.get(name, default)
     return value if isinstance(value, str) else default
+
+
+def audit(
+    request: Request,
+    conn: sqlite3.Connection,
+    event: str,
+    *,
+    username: str = "",
+    detail: str = "",
+) -> None:
+    """Schreibt ein Ereignis ins Sicherheitsprotokoll.
+
+    Warnereignisse (Fehlversuche, abgelehnte Schlüssel, …) werden je Anschluss gedrosselt,
+    damit eine Anfrageflut das Protokoll nicht füllt.
+    """
+    from ..security import rate_key
+    from ..services import security_log
+
+    c = ctx(request)
+    ip = client_ip(request, c.settings)
+    if event in security_log.WARNINGS and c.limiter.hit(
+        f"audit:{event}:{rate_key(ip)}", AUDIT_WARNINGS_PER_WINDOW, AUDIT_WINDOW_SECONDS
+    ):
+        return
+    security_log.record(
+        conn,
+        c.settings,
+        event,
+        username=username,
+        ip=ip,
+        user_agent=request.headers.get("user-agent", ""),
+        detail=detail,
+    )
+
+
+AUDIT_WARNINGS_PER_WINDOW = 20
+AUDIT_WINDOW_SECONDS = 600

@@ -53,7 +53,7 @@ from ..security import rate_key, unwrap_code, wrap_code
 from ..services import auth, books, links, misc
 from ..validation import EpubLimits
 from . import admin
-from .common import AppContext, base_url, client_ip, ctx, get_conn
+from .common import AppContext, audit, base_url, client_ip, ctx, get_conn
 
 DESCRIPTION = """
 REST-API zur Verwaltung von Büchern, Ausgaben und Käuferlinks.
@@ -158,6 +158,8 @@ def _check_key(context: AppContext, request: Request) -> dict[str, Any]:
     if key is None:
         if header:
             context.limiter.record(fail_key, 600)
+            with open_db(settings.db_path) as conn:
+                audit(request, conn, "api_key_rejected", detail=request.url.path[:200])
         raise Unauthorized(
             _("API-Schlüssel fehlt oder ist ungültig."), headers={"WWW-Authenticate": "Bearer"}
         )
@@ -516,7 +518,16 @@ def build_api(context: AppContext) -> FastAPI:
         conn: sqlite3.Connection = Depends(get_conn),
     ) -> Any:
         """Löscht Buch, Ausgaben, Dateien und alle Links endgültig. Berechtigung: `books:write`"""
-        return books.delete_book(conn, ctx(request).storage, book_id, expected_link_count)
+        title = books.get_book_row(conn, book_id)["title"]
+        result = books.delete_book(conn, ctx(request).storage, book_id, expected_link_count)
+        audit(
+            request,
+            conn,
+            "book_deleted",
+            username=f"API: {key['name']}",
+            detail=f"{title} ({book_id})",
+        )
+        return result
 
     @api.put(
         "/books/{book_id}/cover",

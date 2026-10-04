@@ -193,6 +193,44 @@ MIGRATIONS: list[str] = [
     CREATE INDEX orders_created ON orders(created_at);
     CREATE INDEX orders_due ON orders(status, next_attempt_at);
     """,
+    # Version 4: Zwei-Faktor-Anmeldung und Sicherheitsprotokoll
+    """
+    -- TOTP-Geheimnis, mit dem SECRET_KEY verschlüsselt. totp_pending gilt nur während
+    -- der Einrichtung. totp_last_step verhindert, dass ein Code zweimal gilt.
+    ALTER TABLE users ADD COLUMN totp_secret TEXT;
+    ALTER TABLE users ADD COLUMN totp_pending TEXT;
+    ALTER TABLE users ADD COLUMN totp_enabled_at TEXT;
+    ALTER TABLE users ADD COLUMN totp_last_step INTEGER NOT NULL DEFAULT 0;
+
+    CREATE TABLE recovery_codes (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        code_hash TEXT NOT NULL,
+        used_at TEXT
+    );
+    CREATE INDEX recovery_codes_user ON recovery_codes(user_id);
+
+    -- Angemeldet mit Passwort, aber der zweite Faktor fehlt noch.
+    CREATE TABLE login_challenges (
+        token_hash TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+    );
+
+    CREATE TABLE security_events (
+        id INTEGER PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        event TEXT NOT NULL,
+        username TEXT NOT NULL DEFAULT '',
+        ip TEXT NOT NULL DEFAULT '',
+        user_agent TEXT NOT NULL DEFAULT '',
+        detail TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX security_events_created ON security_events(created_at);
+    CREATE INDEX security_events_event ON security_events(event, created_at);
+    """,
 ]
 
 

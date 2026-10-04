@@ -811,3 +811,27 @@ details + details {
   margin: 0 0 0.75rem;
   text-align: right;
 }
+
+/* Zwei-Faktor-Anmeldung */
+.qr {
+  background: #ffffff;
+  border-radius: 8px;
+  display: inline-block;
+  line-height: 0;
+  margin: 0.5rem 0 1rem;
+  padding: 0.5rem;
+}
+
+.qr svg {
+  height: auto;
+  max-width: 240px;
+  width: 100%;
+}
+
+.recovery-codes {
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+  resize: none;
+  width: 100%;
+}

@@ -1,0 +1,136 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid, pagination %}
+{% block title %}{{ _("Sicherheit") }}{% endblock %}
+{% block content %}
+<h1>{{ _("Sicherheit") }}</h1>
+
+{% if recent_warnings %}
+<div class="alert alert-warn" role="status">
+  <p>{{ _("%(n)s Warnung in den letzten 24 Stunden.", n=recent_warnings) if recent_warnings == 1 else _("%(n)s Warnungen in den letzten 24 Stunden.", n=recent_warnings) }} <a href="/admin/security?filter=warnings#protokoll">{{ _("Anzeigen") }}</a></p>
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <section class="card" aria-labelledby="h-mfa">
+    <h2 id="h-mfa">{{ _("Zwei-Faktor-Anmeldung") }}
+      {% if mfa.enabled %}<span class="badge badge-active">{{ _("eingeschaltet") }}</span>{% else %}<span class="badge badge-disabled">{{ _("ausgeschaltet") }}</span>{% endif %}
+    </h2>
+    {% if mfa.enabled %}
+    <dl class="facts small">
+      <dt>{{ _("Eingeschaltet") }}</dt><dd>{{ mfa.enabled_at | dt }}</dd>
+      <dt>{{ _("Unbenutzte Notfall-Codes") }}</dt><dd>{{ mfa.recovery_remaining }}</dd>
+    </dl>
+    {% if mfa.recovery_remaining < 3 %}
+    <p class="hint">{{ _("Nur noch wenige Notfall-Codes übrig. Erstelle neue.") }}</p>
+    {% endif %}
+    <details class="mt">
+      <summary>{{ _("Neue Notfall-Codes erstellen") }}</summary>
+      <form method="post" action="/admin/security/mfa/recovery" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="field">
+          <label for="rc_password">{{ _("Aktuelles Passwort") }}</label>
+          <input id="rc_password" name="current_password" type="password" autocomplete="current-password" required maxlength="256" {{ invalid(error, "current_password") }}>
+        </div>
+        <div class="field">
+          <label for="rc_code">{{ _("Code aus der App") }}</label>
+          <input id="rc_code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required maxlength="40" {{ invalid(error, "code") }}>
+        </div>
+        <button class="btn btn-secondary" type="submit">{{ _("Neue Codes erstellen") }}</button>
+        <p class="hint">{{ _("Die bisherigen Notfall-Codes werden ungültig.") }}</p>
+      </form>
+    </details>
+    <details>
+      <summary>{{ _("Zwei-Faktor-Anmeldung ausschalten") }}</summary>
+      <form method="post" action="/admin/security/mfa/disable" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="field">
+          <label for="off_password">{{ _("Aktuelles Passwort") }}</label>
+          <input id="off_password" name="current_password" type="password" autocomplete="current-password" required maxlength="256" {{ invalid(error, "current_password") }}>
+          {{ field_error(error, "current_password") }}
+        </div>
+        <div class="field">
+          <label for="off_code">{{ _("Code aus der App oder Notfall-Code") }}</label>
+          <input id="off_code" name="code" type="text" autocomplete="one-time-code" required maxlength="40" {{ invalid(error, "code") }}>
+          {{ field_error(error, "code") }}
+        </div>
+        <button class="btn btn-danger" type="submit">{{ _("Ausschalten") }}</button>
+      </form>
+    </details>
+    {% else %}
+    <p>{{ _("Schützt die Verwaltung auch dann, wenn dein Passwort bekannt wird: Nach dem Passwort wird ein Code aus einer Authenticator-App auf deinem Handy abgefragt.") }}</p>
+    <form method="post" action="/admin/security/mfa/setup">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn" type="submit">{{ _("Jetzt einrichten") }}</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="h-alerts">
+    <h2 id="h-alerts">{{ _("Benachrichtigungen") }}</h2>
+    {% if not mail_configured %}
+    <p class="hint">{{ _("Für Benachrichtigungen muss der E-Mail-Versand eingerichtet sein (<code>BREVO_API_KEY</code>, <code>MAIL_FROM_EMAIL</code>).") | safe }}</p>
+    {% endif %}
+    <form method="post" action="/admin/security/alerts">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="alert_email">{{ _("E-Mail-Adresse für Benachrichtigungen") }}</label>
+        <input id="alert_email" name="alert_email" type="email" maxlength="254" autocomplete="email" value="{{ values.alert_email if values.alert_email is defined else alerts.email }}" {{ invalid(error, "alert_email") }}>
+        {{ field_error(error, "alert_email") }}
+      </div>
+      {% set on_login = values.on_login if values.on_login is defined else alerts.on_login %}
+      {% set on_warning = values.on_warning if values.on_warning is defined else alerts.on_warning %}
+      <label class="check"><input type="checkbox" name="on_login" value="1" {% if on_login %}checked{% endif %}> <span>{{ _("Bei jeder erfolgreichen Anmeldung") }}</span></label>
+      <label class="check"><input type="checkbox" name="on_warning" value="1" {% if on_warning %}checked{% endif %}> <span>{{ _("Bei Warnzeichen: zu viele Fehlversuche, falscher Code nach richtigem Passwort, Notfall-Code verwendet, Passwort oder Zwei-Faktor-Anmeldung geändert, neuer API-Schlüssel") }}</span></label>
+      <p class="hint">{{ _("Die Benachrichtigungen kommen in der Sprache, in der du diese Einstellung speicherst. Gleiche Warnungen höchstens alle 30 Minuten.") }}</p>
+      <div class="row">
+        <button class="btn" type="submit">{{ _("Speichern") }}</button>
+      </div>
+    </form>
+    {% if alerts.email and mail_configured %}
+    <form method="post" action="/admin/security/alerts/test" class="mt">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-secondary" type="submit">{{ _("Test-Benachrichtigung senden") }}</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card" aria-labelledby="h-log" id="protokoll">
+  <div class="page-head">
+    <h2 id="h-log">{{ _("Sicherheitsprotokoll") }}</h2>
+    <p class="small">
+      {% if warnings_only %}<a href="/admin/security#protokoll">{{ _("Alle Ereignisse") }}</a>{% else %}<a href="/admin/security?filter=warnings#protokoll">{{ _("Nur Warnungen") }}</a>{% endif %}
+    </p>
+  </div>
+  {% if events["items"] %}
+  <div class="table-wrap">
+    <table class="responsive">
+      <thead>
+        <tr>
+          <th scope="col">{{ _("Zeit") }}</th>
+          <th scope="col">{{ _("Ereignis") }}</th>
+          <th scope="col">{{ _("Benutzer") }}</th>
+          <th scope="col">{{ _("Adresse") }}</th>
+          <th scope="col">{{ _("Details") }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in events["items"] %}
+        <tr>
+          <td class="primary">{{ item.created_at | dt }}</td>
+          <td data-label="{{ _('Ereignis') }}">{% if item.warning %}<span class="badge badge-revoked">{{ item.label }}</span>{% else %}{{ item.label }}{% endif %}</td>
+          <td data-label="{{ _('Benutzer') }}">{{ item.username or "–" }}</td>
+          <td data-label="{{ _('Adresse') }}" class="mono small">{{ item.ip or "–" }}</td>
+          <td data-label="{{ _('Details') }}" class="small">{{ item.detail }}{% if item.user_agent %} <span class="muted" title="{{ item.user_agent }}">{{ item.user_agent | truncate(40) }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(events, page, page_size, "filter=" ~ ("warnings" if warnings_only else "")) }}
+  {% else %}
+  <p>{{ _("Noch keine Ereignisse.") }}</p>
+  {% endif %}
+  <p class="hint">{{ _("Einträge werden nach einem Jahr gelöscht.") }}</p>
+</section>
+{% endblock %}

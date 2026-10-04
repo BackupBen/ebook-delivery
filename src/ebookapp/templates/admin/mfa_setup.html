@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import field_error, invalid %}
+{% block title %}{{ _("Zwei-Faktor-Anmeldung einrichten") }}{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/admin/security">{{ _("Sicherheit") }}</a> › {{ _("Zwei-Faktor-Anmeldung einrichten") }}</p>
+<h1>{{ _("Zwei-Faktor-Anmeldung einrichten") }}</h1>
+
+<section class="card" aria-labelledby="h-step1">
+  <h2 id="h-step1">{{ _("1. Authenticator-App verbinden") }}</h2>
+  <p>{{ _("Scanne den QR-Code mit einer Authenticator-App, z. B. Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden oder Aegis.") }}</p>
+  <div class="qr" role="img" aria-label="{{ _('QR-Code für die Authenticator-App') }}">{{ qr_svg | safe }}</div>
+  <p class="small">{{ _("Scannen nicht möglich? Gib diesen Schlüssel von Hand ein (zeitbasiert, 6 Ziffern):") }}</p>
+  <label class="visually-hidden" for="mfa-secret">{{ _("Schlüssel") }}</label>
+  <div class="copy-row">
+    <input id="mfa-secret" type="text" readonly value="{{ secret }}" class="mono" spellcheck="false">
+    <button type="button" class="btn btn-secondary" data-copy="mfa-secret" data-copy-status="status-secret">{{ _("Kopieren") }}</button>
+  </div>
+  <p class="copy-status" id="status-secret" role="status" aria-live="polite"></p>
+</section>
+
+<form class="card" method="post" action="/admin/security/mfa/enable" autocomplete="off">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <h2>{{ _("2. Code bestätigen") }}</h2>
+  <div class="field">
+    <label for="code">{{ _("Code aus der App") }}</label>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required maxlength="10" spellcheck="false" {{ invalid(error, "code") }}>
+    {{ field_error(error, "code") }}
+  </div>
+  <div class="field">
+    <label for="current_password">{{ _("Aktuelles Passwort") }}</label>
+    <input id="current_password" name="current_password" type="password" autocomplete="current-password" required maxlength="256" {{ invalid(error, "current_password") }}>
+    {{ field_error(error, "current_password") }}
+  </div>
+  <button class="btn" type="submit">{{ _("Zwei-Faktor-Anmeldung einschalten") }}</button>
+  <p class="hint">{{ _("Danach erhältst du einmalig zehn Notfall-Codes für den Fall, dass du keinen Zugriff auf die App hast.") }}</p>
+</form>
+{% endblock %}
